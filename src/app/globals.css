@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "../components/dashboard/dashboard.css";
+@import "../components/assignments/assignments.css";
 
 :root {
   color-scheme: light;

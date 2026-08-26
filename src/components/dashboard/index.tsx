@@ -35,6 +35,8 @@ export function LearningDashboard() {
   );
 }
 
+export { Icon } from "./icons";
+
 export {
   DashboardIntro,
   DashboardShell,

@@ -24,7 +24,7 @@ const primaryNavigation: NavItem[] = [
   { label: "Settings", href: "/settings", icon: "settings" },
 ];
 
-export function DashboardShell({ children }: { children: ReactNode }) {
+export function DashboardShell({ children, activeHref = "/" }: { children: ReactNode; activeHref?: string }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
@@ -45,7 +45,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
         </div>
         <nav className="dashboard-navigation" aria-label="Main navigation">
           {primaryNavigation.map((item) => (
-            <Link className={`dashboard-nav-item${item.href === "/" ? " is-active" : ""}`} href={item.href} key={item.label} onClick={() => setSidebarOpen(false)}>
+            <Link className={`dashboard-nav-item${item.href === activeHref ? " is-active" : ""}`} href={item.href} key={item.label} onClick={() => setSidebarOpen(false)}>
               <Icon name={item.icon} size={16} />
               <span>{item.label}</span>
             </Link>
