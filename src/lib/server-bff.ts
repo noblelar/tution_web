@@ -32,6 +32,6 @@ export async function protectedJsonResponse<T>(
   }
   response.headers.set("cache-control", "no-store");
   if (call.refreshed) setSessionCookies(response, call.refreshed);
-  if (response.status === 401) clearSessionCookies(response);
+  if (call.sessionInvalid) clearSessionCookies(response);
   return response;
 }

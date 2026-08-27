@@ -2,8 +2,10 @@
 
 import { FormEvent, useCallback, useEffect, useState } from "react";
 
+import { FormDialog } from "@/components/ui/form-dialog";
 import type { Centre } from "@/lib/account-types";
 import type { AcademicLevel, AcademicLevelList, Subject, SubjectList } from "@/lib/academic-types";
+import { AcademicYearsPanel } from "./academic-years-panel";
 import styles from "./academic-setup.module.css";
 
 type ApiError = { error?: string };
@@ -28,6 +30,7 @@ export function AcademicSetup() {
   const [subjectDraft, setSubjectDraft] = useState<SubjectDraft>(emptySubject);
   const [editingLevelId, setEditingLevelId] = useState("");
   const [editingSubjectId, setEditingSubjectId] = useState("");
+  const [dialogKind, setDialogKind] = useState<"level" | "subject" | null>(null);
   const [loading, setLoading] = useState(true);
   const [pendingAction, setPendingAction] = useState("");
   const [error, setError] = useState("");
@@ -139,16 +142,46 @@ export function AcademicSetup() {
   function editLevel(level: AcademicLevel) {
     setEditingLevelId(level.id);
     setLevelDraft({ name: level.name, description: level.description ?? "", displayOrder: String(level.displayOrder) });
+    setError("");
+    setNotice("");
+    setDialogKind("level");
   }
 
-  function cancelLevelEdit() { setEditingLevelId(""); setLevelDraft(emptyLevel); }
+  function openLevelDialog() {
+    setEditingLevelId("");
+    setLevelDraft(emptyLevel);
+    setError("");
+    setNotice("");
+    setDialogKind("level");
+  }
+
+  function cancelLevelEdit() {
+    setEditingLevelId("");
+    setLevelDraft(emptyLevel);
+    setDialogKind((current) => current === "level" ? null : current);
+  }
 
   function editSubject(subject: Subject) {
     setEditingSubjectId(subject.id);
     setSubjectDraft({ name: subject.name, code: subject.code, description: subject.description ?? "", displayOrder: String(subject.displayOrder) });
+    setError("");
+    setNotice("");
+    setDialogKind("subject");
   }
 
-  function cancelSubjectEdit() { setEditingSubjectId(""); setSubjectDraft(emptySubject); }
+  function openSubjectDialog() {
+    setEditingSubjectId("");
+    setSubjectDraft(emptySubject);
+    setError("");
+    setNotice("");
+    setDialogKind("subject");
+  }
+
+  function cancelSubjectEdit() {
+    setEditingSubjectId("");
+    setSubjectDraft(emptySubject);
+    setDialogKind((current) => current === "subject" ? null : current);
+  }
 
   return (
     <div className={styles.setup}>
@@ -166,26 +199,21 @@ export function AcademicSetup() {
         </label>
       </section>
 
-      {error ? <p className={`form-error ${styles.message}`} role="alert">{error}</p> : null}
+      {error && !dialogKind ? <p className={`form-error ${styles.message}`} role="alert">{error}</p> : null}
       {notice ? <p className={styles.success} role="status">{notice}</p> : null}
       {loading ? <p className="loading-state">Loading academic catalogue…</p> : null}
 
       {!loading && centreId ? (
-        <div className={styles.catalogueGrid}>
+        <>
+          <AcademicYearsPanel centreId={centreId} />
+          <div className={styles.catalogueGrid}>
           <CataloguePanel
             title="Academic levels"
             description="Create the ordered levels used later by students, tutors, lessons, materials, and assignments."
             count={levels.length}
+            actionLabel="Add level"
+            onAction={openLevelDialog}
           >
-            <form className={`account-form ${styles.form}`} onSubmit={submitLevel}>
-              <label>Name<input maxLength={120} onChange={(event) => setLevelDraft({ ...levelDraft, name: event.target.value })} placeholder="e.g. GCSE" required value={levelDraft.name} /></label>
-              <label>Description <span>Optional</span><textarea maxLength={2000} onChange={(event) => setLevelDraft({ ...levelDraft, description: event.target.value })} placeholder="How this level is used" value={levelDraft.description} /></label>
-              <label>Display order<input max={10000} min={0} onChange={(event) => setLevelDraft({ ...levelDraft, displayOrder: event.target.value })} required type="number" value={levelDraft.displayOrder} /></label>
-              <div className={styles.formActions}>
-                <button className="primary-button" disabled={pendingAction !== ""} type="submit">{editingLevelId ? "Save level" : "Add level"}</button>
-                {editingLevelId ? <button className={styles.secondaryButton} onClick={cancelLevelEdit} type="button">Cancel</button> : null}
-              </div>
-            </form>
             <div className={styles.entries}>
               {levels.length ? levels.map((level) => (
                 <CatalogueEntry key={level.id} name={level.name} description={level.description} order={level.displayOrder} status={level.status}>
@@ -196,19 +224,13 @@ export function AcademicSetup() {
             </div>
           </CataloguePanel>
 
-          <CataloguePanel title="Subjects" description="Maintain the core subjects offered by the tuition centre, with stable codes for future integrations." count={subjects.length}>
-            <form className={`account-form ${styles.form}`} onSubmit={submitSubject}>
-              <div className={styles.twoFields}>
-                <label>Name<input maxLength={120} onChange={(event) => setSubjectDraft({ ...subjectDraft, name: event.target.value })} placeholder="e.g. Mathematics" required value={subjectDraft.name} /></label>
-                <label>Code<input maxLength={24} onChange={(event) => setSubjectDraft({ ...subjectDraft, code: event.target.value.toUpperCase() })} pattern="[A-Za-z0-9][A-Za-z0-9_-]{1,23}" placeholder="MATHS" required value={subjectDraft.code} /></label>
-              </div>
-              <label>Description <span>Optional</span><textarea maxLength={2000} onChange={(event) => setSubjectDraft({ ...subjectDraft, description: event.target.value })} placeholder="What the subject covers" value={subjectDraft.description} /></label>
-              <label>Display order<input max={10000} min={0} onChange={(event) => setSubjectDraft({ ...subjectDraft, displayOrder: event.target.value })} required type="number" value={subjectDraft.displayOrder} /></label>
-              <div className={styles.formActions}>
-                <button className="primary-button" disabled={pendingAction !== ""} type="submit">{editingSubjectId ? "Save subject" : "Add subject"}</button>
-                {editingSubjectId ? <button className={styles.secondaryButton} onClick={cancelSubjectEdit} type="button">Cancel</button> : null}
-              </div>
-            </form>
+          <CataloguePanel
+            title="Subjects"
+            description="Maintain the core subjects offered by the tuition centre, with stable codes for future integrations."
+            count={subjects.length}
+            actionLabel="Add subject"
+            onAction={openSubjectDialog}
+          >
             <div className={styles.entries}>
               {subjects.length ? subjects.map((subject) => (
                 <CatalogueEntry key={subject.id} name={subject.name} code={subject.code} description={subject.description} order={subject.displayOrder} status={subject.status}>
@@ -218,14 +240,58 @@ export function AcademicSetup() {
               )) : <p className="empty-state">No subjects have been created yet.</p>}
             </div>
           </CataloguePanel>
-        </div>
+          </div>
+        </>
       ) : null}
+
+      <FormDialog
+        open={dialogKind === "level"}
+        title={editingLevelId ? "Edit academic level" : "Add academic level"}
+        description="Define the level and its position in the shared academic catalogue."
+        onOpenChange={(open) => { if (!open && pendingAction === "") cancelLevelEdit(); }}
+      >
+        <form className="account-form" onSubmit={submitLevel}>
+          <label>Name<input maxLength={120} onChange={(event) => setLevelDraft({ ...levelDraft, name: event.target.value })} placeholder="e.g. GCSE" required value={levelDraft.name} /></label>
+          <label>Description <span>Optional</span><textarea maxLength={2000} onChange={(event) => setLevelDraft({ ...levelDraft, description: event.target.value })} placeholder="How this level is used" value={levelDraft.description} /></label>
+          <label>Display order<input max={10000} min={0} onChange={(event) => setLevelDraft({ ...levelDraft, displayOrder: event.target.value })} required type="number" value={levelDraft.displayOrder} /></label>
+          {error ? <p className="form-error" role="alert">{error}</p> : null}
+          <div className="dialog-actions">
+            <button disabled={pendingAction !== ""} onClick={cancelLevelEdit} type="button">Cancel</button>
+            <button className="primary-button" disabled={pendingAction !== ""} type="submit">
+              {pendingAction === "create-level" || pendingAction === "update-level" ? "Saving…" : editingLevelId ? "Save level" : "Add level"}
+            </button>
+          </div>
+        </form>
+      </FormDialog>
+
+      <FormDialog
+        open={dialogKind === "subject"}
+        title={editingSubjectId ? "Edit subject" : "Add subject"}
+        description="Define the subject and its stable code in the shared academic catalogue."
+        onOpenChange={(open) => { if (!open && pendingAction === "") cancelSubjectEdit(); }}
+      >
+        <form className="account-form" onSubmit={submitSubject}>
+          <div className={styles.twoFields}>
+            <label>Name<input maxLength={120} onChange={(event) => setSubjectDraft({ ...subjectDraft, name: event.target.value })} placeholder="e.g. Mathematics" required value={subjectDraft.name} /></label>
+            <label>Code<input maxLength={24} onChange={(event) => setSubjectDraft({ ...subjectDraft, code: event.target.value.toUpperCase() })} pattern="[A-Za-z0-9][A-Za-z0-9_-]{1,23}" placeholder="MATHS" required value={subjectDraft.code} /></label>
+          </div>
+          <label>Description <span>Optional</span><textarea maxLength={2000} onChange={(event) => setSubjectDraft({ ...subjectDraft, description: event.target.value })} placeholder="What the subject covers" value={subjectDraft.description} /></label>
+          <label>Display order<input max={10000} min={0} onChange={(event) => setSubjectDraft({ ...subjectDraft, displayOrder: event.target.value })} required type="number" value={subjectDraft.displayOrder} /></label>
+          {error ? <p className="form-error" role="alert">{error}</p> : null}
+          <div className="dialog-actions">
+            <button disabled={pendingAction !== ""} onClick={cancelSubjectEdit} type="button">Cancel</button>
+            <button className="primary-button" disabled={pendingAction !== ""} type="submit">
+              {pendingAction === "create-subject" || pendingAction === "update-subject" ? "Saving…" : editingSubjectId ? "Save subject" : "Add subject"}
+            </button>
+          </div>
+        </form>
+      </FormDialog>
     </div>
   );
 }
 
-function CataloguePanel({ title, description, count, children }: { title: string; description: string; count: number; children: React.ReactNode }) {
-  return <section className={`management-panel ${styles.cataloguePanel}`}><header className={styles.panelHeader}><div><p className="eyebrow">{count} configured</p><h2>{title}</h2><p>{description}</p></div></header>{children}</section>;
+function CataloguePanel({ title, description, count, actionLabel, onAction, children }: { title: string; description: string; count: number; actionLabel: string; onAction: () => void; children: React.ReactNode }) {
+  return <section className={`management-panel ${styles.cataloguePanel}`}><header className={styles.panelHeader}><div><p className="eyebrow">{count} configured</p><h2>{title}</h2><p>{description}</p></div><button className="primary-button" onClick={onAction} type="button">{actionLabel}</button></header>{children}</section>;
 }
 
 function CatalogueEntry({ name, code, description, order, status, children }: { name: string; code?: string; description?: string; order: number; status: "active" | "inactive"; children: React.ReactNode }) {

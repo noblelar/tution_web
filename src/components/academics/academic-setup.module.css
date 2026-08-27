@@ -4,15 +4,23 @@
 .scopePanel p:not(:first-child), .panelHeader p { max-width: 48rem; margin-bottom: 0; color: var(--muted); line-height: 1.55; }
 .catalogueGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.25rem; align-items: start; }
 .cataloguePanel { overflow: hidden; padding: 0; }
-.panelHeader { padding: 1.4rem 1.4rem 1.2rem; border-bottom: 1px solid var(--border-soft); background: #fffaf8; }
+.yearsPanel { border-color: #e2d4ef; }
+.yearsPanel .panelHeader { background: linear-gradient(135deg, #fff 0%, #faf7ff 100%); }
+.panelHeader { display: flex; align-items: flex-start; justify-content: space-between; gap: 1.25rem; padding: 1.4rem 1.4rem 1.2rem; border-bottom: 1px solid var(--border-soft); background: #fffaf8; }
+.panelHeader > button { flex: none; }
 .panelHeader .eyebrow { margin-bottom: 0.4rem; }
 .form { margin: 0; padding: 1.35rem; border-bottom: 1px solid var(--border-soft); }
+.yearForm { display: grid; grid-template-columns: minmax(12rem, 1.4fr) repeat(2, minmax(10rem, 0.8fr)) auto; align-items: end; gap: 0.8rem; }
+.yearForm .formActions { align-items: center; min-height: 2.75rem; }
 .form textarea { min-height: 5rem; resize: vertical; width: 100%; padding: 0.75rem; border: 1px solid #b7c4d4; border-radius: 0.55rem; background: #fff; color: var(--foreground); font: inherit; }
 .twoFields { display: grid; grid-template-columns: minmax(0, 1fr) minmax(8rem, 0.45fr); gap: 0.8rem; }
 .formActions, .entryActions { display: flex; flex-wrap: wrap; gap: 0.55rem; }
 .secondaryButton, .entryActions button { padding: 0.62rem 0.8rem; border: 1px solid #d8d5da; border-radius: 0.5rem; background: #fff; color: #423e48; font: inherit; font-size: 0.82rem; font-weight: 700; cursor: pointer; }
 .entries { display: grid; gap: 0.8rem; padding: 1.35rem; }
+.yearEntries { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .entry { padding: 1rem; border: 1px solid var(--border-soft); border-radius: 0.75rem; background: #fff; box-shadow: 0 0.35rem 1rem rgb(40 37 53 / 4%); }
+.currentYear { border-color: #9bd2b8; box-shadow: 0 0.35rem 1rem rgb(23 98 58 / 8%); }
+.statusPlanned { background: #f4effb; color: #66418b; }
 .entryHeader { display: flex; align-items: start; justify-content: space-between; gap: 1rem; }
 .entryTitle { display: flex; flex-wrap: wrap; align-items: center; gap: 0.55rem; }
 .entryTitle h3 { margin: 0; font-size: 1rem; }
@@ -24,7 +32,8 @@
 .entryActions .dangerButton { border-color: #ebc6cb; color: #8b1c2c; }
 .entryActions .restoreButton { border-color: #b7dec9; color: #17623a; }
 .message, .success { margin: 0; padding: 0.9rem 1rem; border-radius: 0.65rem; }
+.inlineMessage { margin: 1rem 1.35rem 0; }
 .message { border: 1px solid #ebc6cb; background: #fff3f4; }
 .success { border: 1px solid #b7dec9; background: #edf9f3; color: #17623a; font-weight: 700; }
-@media (max-width: 70rem) { .catalogueGrid { grid-template-columns: 1fr; } }
-@media (max-width: 48rem) { .scopePanel, .entryHeader, .entryFooter { align-items: stretch; flex-direction: column; } .twoFields { grid-template-columns: 1fr; } }
+@media (max-width: 70rem) { .catalogueGrid { grid-template-columns: 1fr; } .yearForm { grid-template-columns: repeat(2, minmax(0, 1fr)); } .yearEntries { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 48rem) { .scopePanel, .panelHeader, .entryHeader, .entryFooter { align-items: stretch; flex-direction: column; } .twoFields, .yearForm, .yearEntries { grid-template-columns: 1fr; } }

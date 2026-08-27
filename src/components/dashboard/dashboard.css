@@ -290,6 +290,13 @@
   font-weight: 850;
 }
 
+.dashboard-account-menu button.is-secondary {
+  margin-top: 0.35rem;
+  border: 1px solid #ffd8ca;
+  background: var(--dashboard-orange-soft);
+  color: var(--dashboard-orange);
+}
+
 .dashboard-account-menu button:disabled {
   cursor: wait;
   opacity: 0.7;
@@ -306,6 +313,31 @@
   width: min(100%, 65rem);
   margin: 0 auto;
   padding: 1.35rem 1.9rem 1.5rem;
+}
+
+.dashboard-guard-state {
+  width: min(100%, 38rem);
+  margin: 0 auto;
+  padding: 5rem 1.9rem 1.5rem;
+  text-align: center;
+}
+
+.dashboard-guard-state h1,
+.dashboard-guard-state p {
+  margin: 0;
+}
+
+.dashboard-guard-state h1 {
+  color: var(--dashboard-ink);
+  font-size: clamp(1.45rem, 3vw, 2rem);
+  letter-spacing: -0.04em;
+}
+
+.dashboard-guard-state p:not(.eyebrow) {
+  margin-top: 0.45rem;
+  color: var(--dashboard-muted);
+  font-size: 0.78rem;
+  line-height: 1.6;
 }
 
 .dashboard-intro {
@@ -2102,6 +2134,59 @@
   margin-top: 0.8rem;
 }
 
+.tutor-directory-preview {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem;
+}
+
+.tutor-directory-preview h2,
+.tutor-directory-preview p {
+  margin: 0;
+}
+
+.tutor-directory-preview h2 {
+  color: #302d38;
+  font-size: 0.95rem;
+}
+
+.tutor-directory-preview p:not(.eyebrow) {
+  max-width: 42rem;
+  margin-top: 0.35rem;
+  color: var(--dashboard-muted);
+  font-size: 0.68rem;
+  line-height: 1.55;
+}
+
+.account-settings {
+  display: grid;
+  gap: 1rem;
+}
+
+.settings-readiness-list {
+  display: grid;
+  gap: 0.55rem;
+  margin-top: 0.85rem;
+}
+
+.settings-readiness-list span {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid #f1eff0;
+  border-radius: 0.5rem;
+  color: #5f5b65;
+  font-size: 0.66rem;
+  font-weight: 750;
+}
+
+.settings-readiness-list svg {
+  color: var(--dashboard-orange);
+}
+
 @media (max-width: 62rem) {
   .dashboard-overview-grid { grid-template-columns: 1fr 1.6fr; }
   .mini-calendar-card { grid-column: span 2; }
@@ -2170,4 +2255,5 @@
   .student-search { grid-column: auto; }
   .relationship-card header { display: grid; }
   .relationship-permissions { grid-template-columns: 1fr; }
+  .tutor-directory-preview { display: grid; }
 }

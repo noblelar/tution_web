@@ -19,7 +19,7 @@ type BarMetric = {
 type ActivityItem = {
   label: string;
   description: string;
-  status: "Ready" | "Next" | "Planned";
+  status: "Ready" | "Deferred";
 };
 
 const metrics: MetricCard[] = [
@@ -45,9 +45,9 @@ const metrics: MetricCard[] = [
     icon: "grid",
   },
   {
-    label: "Admin routes",
-    value: "12",
-    helper: "Manager and owner routes are now dashboard-mounted.",
+    label: "Dashboard shell",
+    value: "Guarded",
+    helper: "Admin, parent, and student areas now check role access before rendering.",
     tone: "purple",
     icon: "activity",
   },
@@ -57,8 +57,8 @@ const profileReadiness: BarMetric[] = [
   { label: "People code foundation", value: 100, display: "100%" },
   { label: "Student access lifecycle", value: 100, display: "100%" },
   { label: "Family relationship rules", value: 100, display: "100%" },
-  { label: "Dashboard data APIs", value: 40, display: "Next" },
-  { label: "Live directory screens", value: 25, display: "Next" },
+  { label: "Manager-led onboarding forms", value: 100, display: "100%" },
+  { label: "Role-aware dashboard guarding", value: 100, display: "100%" },
 ];
 
 const relationshipMix = [
@@ -71,25 +71,31 @@ const relationshipMix = [
 const activity: ActivityItem[] = [
   {
     label: "Students directory",
-    description: "Search, filter, and profile-summary cards are next in Phase 3.",
-    status: "Next",
+    description: "Search, filtering, profile cards, detail pages, people-code visibility, and lifecycle actions are in place.",
+    status: "Ready",
   },
   {
     label: "Parents and links",
-    description: "Relationship management moves into the dashboard in Phase 4.",
-    status: "Planned",
+    description: "Parent directory, parent detail, linked-student permissions, and relationship lifecycle controls are in place.",
+    status: "Ready",
   },
   {
     label: "Manager-led onboarding",
-    description: "Parent, student, and parent-with-student forms follow in Phase 5.",
-    status: "Planned",
+    description: "Parent, student, parent-with-student, and tutor onboarding workflows are now dashboard-facing.",
+    status: "Ready",
+  },
+  {
+    label: "Live dashboard metrics",
+    description: "Operational graph data is intentionally deferred until later stages add bookings, attendance, credits, and reports.",
+    status: "Deferred",
   },
 ];
 
 const quickActions = [
-  { label: "Students", href: "/app/admin/students", description: "Prepare student directory and detail views.", icon: "users" as IconName },
-  { label: "Parents", href: "/app/admin/parents", description: "Prepare parent records and linked children.", icon: "grid" as IconName },
-  { label: "Tutors", href: "/app/admin/tutors", description: "Prepare tutor onboarding and assignment space.", icon: "book" as IconName },
+  { label: "Students", href: "/app/admin/students", description: "Manage student profiles, people codes, and lifecycle controls.", icon: "users" as IconName },
+  { label: "Parents", href: "/app/admin/parents", description: "Manage parent records and linked-student permissions.", icon: "grid" as IconName },
+  { label: "Tutors", href: "/app/admin/tutors", description: "Onboard tutors and prepare the future tutor directory.", icon: "book" as IconName },
+  { label: "Settings", href: "/app/admin/settings", description: "Review your signed-in account and session controls.", icon: "settings" as IconName },
 ];
 
 export function AdminDashboardOverview() {
@@ -100,13 +106,13 @@ export function AdminDashboardOverview() {
           <p className="eyebrow">Admin area</p>
           <h1 id="admin-dashboard-title">Manager dashboard</h1>
           <p>
-            A Stage 2 command centre for profile demographics, relationship health,
-            onboarding readiness, and manager action points.
+            A Stage 2 command centre for managed profiles, family relationships,
+            onboarding workflows, and access-boundary readiness.
           </p>
         </div>
         <div className="admin-dashboard-status" aria-label="Stage 2 dashboard status">
           <span>Stage 2</span>
-          <strong>Dashboard-facing pass</strong>
+          <strong>Ready for Stage 3 planning</strong>
         </div>
       </header>
 
@@ -160,7 +166,7 @@ export function AdminDashboardOverview() {
         </article>
 
         <article className="admin-panel admin-action-panel">
-          <PanelHeading title="Manager action queue" subtitle="The next build path from this landing page" />
+          <PanelHeading title="Stage 2 completion notes" subtitle="What is ready now, and what is intentionally deferred" />
           <div className="admin-activity-list">
             {activity.map((item) => (
               <div className="admin-activity-row" key={item.label}>
@@ -175,7 +181,7 @@ export function AdminDashboardOverview() {
         </article>
 
         <article className="admin-panel admin-wide-panel">
-          <PanelHeading title="Onboarding trend" subtitle="Dashboard structure ready for live weekly profile counts" />
+          <PanelHeading title="Onboarding trend" subtitle="Visual placeholder retained until later stages provide live operational data" />
           <div className="admin-trend-chart" aria-label="Onboarding trend placeholder chart">
             {[42, 58, 50, 76, 68, 86, 74].map((height, index) => (
               <div className="admin-trend-column" key={index}>
@@ -187,7 +193,7 @@ export function AdminDashboardOverview() {
         </article>
 
         <article className="admin-panel admin-quick-panel">
-          <PanelHeading title="Quick routes" subtitle="Move into the next dashboard management areas" />
+          <PanelHeading title="Quick routes" subtitle="Move into the active Stage 2 management areas" />
           <div className="admin-quick-list">
             {quickActions.map((action) => (
               <Link className="admin-quick-link" href={action.href} key={action.label}>

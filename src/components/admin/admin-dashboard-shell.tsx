@@ -10,6 +10,7 @@ const adminNavigation: DashboardNavItem[] = [
   { label: "Students", href: "/app/admin/students", icon: "users" },
   { label: "Parents", href: "/app/admin/parents", icon: "users" },
   { label: "Tutors", href: "/app/admin/tutors", icon: "book" },
+  { label: "Centres", href: "/app/admin/centres", icon: "grid" },
   { label: "Schedule", href: "/app/admin/schedule", icon: "calendar" },
   { label: "Classes", href: "/app/admin/classes", icon: "palette" },
   { label: "Bookings", href: "/app/admin/bookings", icon: "check" },

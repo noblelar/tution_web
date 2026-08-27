@@ -1,4 +1,5 @@
 export type AcademicStatus = "active" | "inactive";
+export type AcademicYearStatus = "planned" | "current" | "closed";
 
 export type AcademicLevel = {
   id: string;
@@ -23,5 +24,17 @@ export type Subject = {
   updatedAt: string;
 };
 
+export type AcademicYear = {
+  id: string;
+  organizationId: string;
+  name: string;
+  startDate: string;
+  endDate: string;
+  status: AcademicYearStatus;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type AcademicLevelList = { levels: AcademicLevel[] };
 export type SubjectList = { subjects: Subject[] };
+export type AcademicYearList = { academicYears: AcademicYear[] };

@@ -25,6 +25,7 @@ type CurrentUser = {
     firstName?: string;
     lastName?: string;
     email?: string;
+    roles?: Array<{ roleKey: string }>;
   };
 };
 
@@ -54,39 +55,67 @@ export function DashboardShell({
   const [displayName, setDisplayName] = useState(defaultDisplayName);
   const [logoutError, setLogoutError] = useState("");
   const [loggingOut, setLoggingOut] = useState(false);
+  const [loggingOutEverywhere, setLoggingOutEverywhere] = useState(false);
+  const [guardState, setGuardState] = useState<"checking" | "allowed" | "unavailable">("checking");
+  const [guardAttempt, setGuardAttempt] = useState(0);
 
   useEffect(() => {
     let active = true;
     async function loadUser() {
+      if (active) setGuardState("checking");
       try {
         const response = await fetch("/api/auth/me", { cache: "no-store" });
-        if (!response.ok) return;
+        if (!response.ok) {
+          if (response.status === 401) {
+            if (active) router.replace("/login");
+            return;
+          }
+          if (active) setGuardState("unavailable");
+          return;
+        }
         const result = (await response.json()) as CurrentUser;
+        const destination = redirectForUnauthorizedRole(result.user?.roles ?? [], homeHref);
+        if (destination) {
+          if (active) router.replace(destination);
+          return;
+        }
         const firstName = result.user?.firstName?.trim();
         const lastName = result.user?.lastName?.trim();
         const email = result.user?.email?.trim();
         const name = [firstName, lastName].filter(Boolean).join(" ") || email || defaultDisplayName;
-        if (active) setDisplayName(name);
+        if (active) {
+          setDisplayName(name);
+          setGuardState("allowed");
+        }
       } catch {
-        // Keep the neutral fallback.
+        if (active) setGuardState("unavailable");
       }
     }
     void loadUser();
     return () => {
       active = false;
     };
-  }, [defaultDisplayName]);
+  }, [defaultDisplayName, guardAttempt, homeHref, router]);
 
   const initial = displayName.trim().charAt(0).toUpperCase() || "S";
 
   async function signOut() {
-    setLoggingOut(true);
-    setLogoutError("");
+    await completeSignOut("/api/auth/logout", "current");
+  }
+
+  async function signOutEverywhere() {
+    await completeSignOut("/api/auth/logout-all", "everywhere");
+  }
+
+  async function completeSignOut(path: "/api/auth/logout" | "/api/auth/logout-all", scope: "current" | "everywhere") {
+    if (scope === "everywhere") setLoggingOutEverywhere(true);
+    else setLoggingOut(true);
     try {
+      setLogoutError("");
       const csrfResponse = await fetch("/api/auth/csrf", { cache: "no-store" });
       if (!csrfResponse.ok) throw new Error("Sign out verification failed.");
       const { csrfToken } = (await csrfResponse.json()) as { csrfToken: string };
-      const response = await fetch("/api/auth/logout", {
+      const response = await fetch(path, {
         method: "POST",
         headers: { "content-type": "application/json", "x-csrf-token": csrfToken },
         body: JSON.stringify({}),
@@ -100,7 +129,8 @@ export function DashboardShell({
       router.refresh();
     } catch (error) {
       setLogoutError(error instanceof Error ? error.message : "Sign out failed.");
-      setLoggingOut(false);
+      if (scope === "everywhere") setLoggingOutEverywhere(false);
+      else setLoggingOut(false);
     }
   }
 
@@ -169,15 +199,37 @@ export function DashboardShell({
                     <span>Signed in to Tution</span>
                   </div>
                   {logoutError ? <p className="dashboard-account-menu-error" role="alert">{logoutError}</p> : null}
-                  <button disabled={loggingOut} onClick={signOut} role="menuitem" type="button">
+                  <button disabled={loggingOut || loggingOutEverywhere} onClick={signOut} role="menuitem" type="button">
                     {loggingOut ? "Signing out…" : "Sign out"}
+                  </button>
+                  <button
+                    className="is-secondary"
+                    disabled={loggingOut || loggingOutEverywhere}
+                    onClick={signOutEverywhere}
+                    role="menuitem"
+                    type="button"
+                  >
+                    {loggingOutEverywhere ? "Signing out everywhere…" : "Sign out everywhere"}
                   </button>
                 </div>
               ) : null}
             </div>
           </div>
         </header>
-        {children}
+        {guardState === "allowed" ? children : guardState === "unavailable" ? (
+          <main className="dashboard-guard-state" aria-live="polite">
+            <p className="eyebrow">Connection interrupted</p>
+            <h1>Your session is still active.</h1>
+            <p>We could not reach the application service. Reconnect and try again; you will remain on this page.</p>
+            <button className="primary-button" onClick={() => setGuardAttempt((attempt) => attempt + 1)} type="button">Try again</button>
+          </main>
+        ) : (
+          <main className="dashboard-guard-state" aria-live="polite">
+            <p className="eyebrow">Checking access</p>
+            <h1>Preparing your workspace…</h1>
+            <p>We are confirming that this dashboard belongs to your account.</p>
+          </main>
+        )}
       </div>
     </div>
   );
@@ -186,4 +238,26 @@ export function DashboardShell({
 function isActive(pathname: string, href: string, homeHref: string): boolean {
   if (href === homeHref) return pathname === href;
   return pathname === href || pathname.startsWith(`${href}/`);
+}
+
+function redirectForUnauthorizedRole(roles: Array<{ roleKey: string }>, currentHome: string): string {
+  const roleKeys = new Set(roles.map((role) => role.roleKey));
+  const expectedHome = roleHome(roleKeys);
+  if (currentHome.startsWith("/app/admin")) {
+    return roleKeys.has("owner") || roleKeys.has("manager") ? "" : expectedHome;
+  }
+  if (currentHome.startsWith("/app/parent")) {
+    return roleKeys.has("parent") ? "" : expectedHome;
+  }
+  if (currentHome.startsWith("/app/student")) {
+    return roleKeys.has("student") ? "" : expectedHome;
+  }
+  return "";
+}
+
+function roleHome(roleKeys: Set<string>): string {
+  if (roleKeys.has("owner") || roleKeys.has("manager")) return "/app/admin";
+  if (roleKeys.has("parent")) return "/app/parent";
+  if (roleKeys.has("student")) return "/app/student";
+  return "/login";
 }

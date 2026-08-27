@@ -1,11 +1,5 @@
-import { AdminPagePlaceholder } from "@/components/admin/admin-page-placeholder";
+import { AccountSettings } from "@/components/admin/account-settings";
 
 export default function AdminSettingsPage() {
-  return (
-    <AdminPagePlaceholder
-      eyebrow="Admin area"
-      title="Settings"
-      description="Centre, organization, and owner-only configuration will live here behind permissions."
-    />
-  );
+  return <AccountSettings />;
 }

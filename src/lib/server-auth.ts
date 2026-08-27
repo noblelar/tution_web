@@ -58,10 +58,23 @@ export type BackendMFARequired = {
   expires_at: string;
 };
 
+export type RefreshBackendResult =
+  | { status: "refreshed"; pair: BackendTokenPair }
+  | { status: "missing" | "invalid" | "in_progress" | "unavailable"; pair: null };
+
 export type ProtectedBackendCall = {
   response: Response;
   refreshed: BackendTokenPair | null;
+  sessionInvalid: boolean;
 };
+
+type CachedRefreshAttempt = {
+  expiresAt: number;
+  result: Promise<RefreshBackendResult>;
+};
+
+const refreshCoalescingWindowMs = 2_000;
+const refreshAttempts = new Map<string, CachedRefreshAttempt>();
 
 export function mapUser(user: BackendUser): AppUser {
   return {
@@ -218,16 +231,47 @@ export async function callBackend(
 
 export async function refreshBackendSession(
   request: NextRequest,
-): Promise<BackendTokenPair | null> {
+): Promise<RefreshBackendResult> {
   const refreshToken = request.cookies.get(REFRESH_COOKIE)?.value;
-  if (!refreshToken) return null;
-  const backendResponse = await callBackend(
-    "/v1/auth/refresh",
-    { method: "POST", body: JSON.stringify({ refresh_token: refreshToken }) },
-    request,
-  );
-  if (!backendResponse.ok) return null;
-  return (await backendResponse.json()) as BackendTokenPair;
+  if (!refreshToken) return { status: "missing", pair: null };
+
+  const now = Date.now();
+  const cacheKey = createHash("sha256").update(refreshToken).digest("base64url");
+  const cached = refreshAttempts.get(cacheKey);
+  if (cached && cached.expiresAt > now) return cached.result;
+  for (const [key, attempt] of refreshAttempts) {
+    if (attempt.expiresAt <= now) refreshAttempts.delete(key);
+  }
+
+  const result = performBackendRefresh(request, refreshToken);
+  refreshAttempts.set(cacheKey, { expiresAt: now + refreshCoalescingWindowMs, result });
+  return result;
+}
+
+async function performBackendRefresh(
+  request: NextRequest,
+  refreshToken: string,
+): Promise<RefreshBackendResult> {
+  let backendResponse: Response;
+  try {
+    backendResponse = await callBackend(
+      "/v1/auth/refresh",
+      { method: "POST", body: JSON.stringify({ refresh_token: refreshToken }) },
+      request,
+    );
+  } catch {
+    return { status: "unavailable", pair: null };
+  }
+  if (backendResponse.ok) {
+    try {
+      return { status: "refreshed", pair: (await backendResponse.json()) as BackendTokenPair };
+    } catch {
+      return { status: "unavailable", pair: null };
+    }
+  }
+  if (backendResponse.status === 401) return { status: "invalid", pair: null };
+  if (backendResponse.status === 409) return { status: "in_progress", pair: null };
+  return { status: "unavailable", pair: null };
 }
 
 export async function callProtectedBackend(
@@ -237,18 +281,24 @@ export async function callProtectedBackend(
 ): Promise<ProtectedBackendCall> {
   let accessToken = request.cookies.get(ACCESS_COOKIE)?.value;
   let refreshed: BackendTokenPair | null = null;
+  let refreshResult: RefreshBackendResult | null = null;
 
   if (!accessToken) {
-    refreshed = await refreshBackendSession(request);
-    accessToken = refreshed?.access_token;
+    refreshResult = await refreshBackendSession(request);
+    if (refreshResult.status === "refreshed") {
+      refreshed = refreshResult.pair;
+      accessToken = refreshed.access_token;
+    }
   }
   if (!accessToken) {
+    const temporarilyUnavailable = refreshResult?.status === "in_progress" || refreshResult?.status === "unavailable";
     return {
-      response: new Response(JSON.stringify({ error: "Not authenticated." }), {
-        status: 401,
+      response: new Response(JSON.stringify({ error: temporarilyUnavailable ? "Session renewal is temporarily unavailable." : "Not authenticated." }), {
+        status: temporarilyUnavailable ? 503 : 401,
         headers: { "content-type": "application/json" },
       }),
       refreshed,
+      sessionInvalid: !temporarilyUnavailable,
     };
   }
 
@@ -258,12 +308,45 @@ export async function callProtectedBackend(
     return callBackend(path, { ...init, headers }, request);
   };
 
-  let response = await call(accessToken);
-  if (response.status === 401 && !refreshed) {
-    refreshed = await refreshBackendSession(request);
-    if (refreshed) response = await call(refreshed.access_token);
+  let response: Response;
+  try {
+    response = await call(accessToken);
+  } catch {
+    return {
+      response: new Response(JSON.stringify({ error: "The application service is temporarily unavailable." }), {
+        status: 503,
+        headers: { "content-type": "application/json" },
+      }),
+      refreshed,
+      sessionInvalid: false,
+    };
   }
-  return { response, refreshed };
+  if (response.status === 401 && !refreshed) {
+    refreshResult = await refreshBackendSession(request);
+    if (refreshResult.status === "refreshed") {
+      refreshed = refreshResult.pair;
+      try {
+        response = await call(refreshed.access_token);
+      } catch {
+        return {
+          response: new Response(JSON.stringify({ error: "The application service is temporarily unavailable." }), {
+            status: 503,
+            headers: { "content-type": "application/json" },
+          }),
+          refreshed,
+          sessionInvalid: false,
+        };
+      }
+    } else if (refreshResult.status === "in_progress" || refreshResult.status === "unavailable") {
+      response = new Response(JSON.stringify({ error: "Session renewal is temporarily unavailable." }), {
+        status: 503,
+        headers: { "content-type": "application/json" },
+      });
+    }
+  }
+  const sessionInvalid = response.status === 401 &&
+    (refreshResult?.status === "invalid" || refreshResult?.status === "missing");
+  return { response, refreshed, sessionInvalid };
 }
 
 export async function backendErrorMessage(
