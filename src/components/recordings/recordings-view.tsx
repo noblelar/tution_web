@@ -30,7 +30,7 @@ export function RecordingsView() {
   }, [filter, sortNewest]);
 
   return (
-    <DashboardShell activeHref="/recordings">
+    <DashboardShell>
       <main className="recordings-main" aria-labelledby="recordings-title">
         <header className="recordings-header">
           <div><h1 id="recordings-title">Class Recordings</h1><p>Access and review past class sessions</p></div>

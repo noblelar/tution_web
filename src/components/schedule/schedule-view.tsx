@@ -41,7 +41,7 @@ export function ScheduleView() {
   const eventsForMonth = monthOffset === 0 ? calendarEvents : [];
 
   return (
-    <DashboardShell activeHref="/schedule">
+    <DashboardShell>
       <main className="schedule-main" aria-labelledby="schedule-title">
         <header className="schedule-header">
           <div className="schedule-title-row"><h1 id="schedule-title">Calendar</h1><nav className="schedule-view-tabs" aria-label="Calendar view"><button className={view === "Monthly" ? "is-active" : ""} type="button" onClick={() => setView("Monthly")}>Monthly</button><button className={view === "Weekly" ? "is-active" : ""} type="button" onClick={() => setView("Weekly")}>Weekly</button><button className={view === "Daily" ? "is-active" : ""} type="button" onClick={() => setView("Daily")}>Daily</button></nav></div>

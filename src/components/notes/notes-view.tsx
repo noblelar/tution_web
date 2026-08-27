@@ -41,7 +41,7 @@ export function NotesView() {
   }, [sortNewest, tag]);
 
   return (
-    <DashboardShell activeHref="/notes">
+    <DashboardShell>
       <main className="notes-main" aria-labelledby="notes-title">
         <header className="notes-header">
           <h1 id="notes-title">Notes</h1>

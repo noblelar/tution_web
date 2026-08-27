@@ -38,7 +38,7 @@ export function AssignmentsView() {
   }), [dateRange, query, status]);
 
   return (
-    <DashboardShell activeHref="/assignments">
+    <DashboardShell>
       <main className="assignments-main" aria-labelledby="assignments-title">
         <header className="assignments-header">
           <div>

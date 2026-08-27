@@ -1,11 +1,11 @@
 import Link from "next/link";
 import { Icon } from "./icons";
 
-export function DashboardIntro() {
+export function DashboardIntro({ firstName = "Student" }: { firstName?: string }) {
   return (
     <header className="dashboard-intro">
       <div>
-        <h1 id="dashboard-title">Hello Harsh <span aria-hidden="true">👋</span></h1>
+        <h1 id="dashboard-title">Hello {firstName} <span aria-hidden="true">👋</span></h1>
         <p>Let&apos;s learn something new today!</p>
       </div>
       <button className="dashboard-add-button" type="button" aria-label="Add a new item"><Icon name="plus" size={18} /></button>
@@ -49,7 +49,7 @@ export function ResourcesCard() {
           <button className="resource-action" type="button">{resource.status}</button>
         </div>)}
       </div>
-      <Link className="resources-see-more" href="/resources">see more</Link>
+      <Link className="resources-see-more" href="/app/student/resources">see more</Link>
     </section>
   );
 }

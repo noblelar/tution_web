@@ -14,6 +14,29 @@ export type ParentStudentLinkList = {
   links: ParentStudentLink[];
 };
 
+export type ParentProfile = {
+  id: string;
+  organizationId: string;
+  userId: string;
+  primaryCentreId?: string;
+  peopleCode: string;
+  preferredName?: string;
+  phoneNumber?: string;
+  addressLine1?: string;
+  addressLine2?: string;
+  city?: string;
+  countyRegion?: string;
+  postalCode?: string;
+  country?: string;
+  marketingOptIn: boolean;
+  contactConsent: boolean;
+  profileStatus: string;
+};
+
+export type ParentProfileList = {
+  parents: ParentProfile[];
+};
+
 export type StudentProfile = {
   id: string;
   organizationId: string;
@@ -24,9 +47,18 @@ export type StudentProfile = {
   lastName: string;
   preferredName?: string;
   dateOfBirth: string;
+  gender?: string;
+  schoolName?: string;
+  academicYearGroup?: string;
+  referralSource?: string;
+  notes?: string;
   emailLoginEnabled: boolean;
   peopleCodeLoginEnabled: boolean;
   profileStatus: string;
+};
+
+export type StudentProfileList = {
+  students: StudentProfile[];
 };
 
 export type ProfileAdminContext = {
