@@ -1,0 +1,194 @@
+.notes-main,
+.recordings-main {
+  width: min(100%, 65rem);
+  margin: 0 auto;
+  padding: 1.1rem 1.2rem 2rem;
+}
+
+.notes-header,
+.recordings-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  min-height: 2.4rem;
+  margin-bottom: 0.85rem;
+}
+
+.notes-header h1,
+.recordings-header h1 {
+  margin: 0;
+  color: #f05b28;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.notes-toolbar,
+.recordings-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  color: #8c8990;
+  font-size: 0.59rem;
+}
+
+.notes-toolbar-button,
+.notes-filter-control,
+.notes-add-button,
+.recordings-search-button,
+.recordings-filter-link,
+.recordings-sort-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.32rem;
+  height: 1.8rem;
+  padding: 0 0.6rem;
+  border: 1px solid #f1a17f;
+  border-radius: 0.2rem;
+  background: #fff;
+  color: #f05b28;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.59rem;
+}
+
+.notes-filter-control select {
+  max-width: 3.7rem;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: #f05b28;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.59rem;
+}
+
+.notes-add-button {
+  border-color: #f05b28;
+  background: #f05b28;
+  color: #fff;
+  font-weight: 600;
+}
+
+.notes-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.7rem;
+}
+
+.note-card {
+  display: flex;
+  min-width: 0;
+  min-height: 8rem;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid #e9e9eb;
+  border-radius: 0.25rem;
+  background: #fff;
+  box-shadow: 0 0.3rem 0.6rem rgb(47 43 54 / 4%);
+}
+
+.note-card-content {
+  flex: 1;
+  padding: 0.65rem 0.7rem 0.3rem;
+}
+
+.note-tags {
+  display: flex;
+  gap: 0.3rem;
+  min-height: 0.85rem;
+}
+
+.note-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.12rem 0.28rem;
+  border-radius: 0.15rem;
+  font-size: 0.42rem;
+}
+
+.note-tag.is-yellow { background: #fafbe1; color: #a4a82d; }
+.note-tag.is-blue { background: #eff5ff; color: #5b94dc; }
+.note-tag.is-green { background: #edf9ee; color: #55a95d; }
+.note-tag.is-purple { background: #f8effb; color: #a669b7; }
+.note-tag.is-orange { background: #fff6ea; color: #bd8b56; }
+
+.note-card h2 {
+  margin: 0.4rem 0 0.35rem;
+  color: #28262e;
+  font-size: 0.62rem;
+  font-weight: 600;
+}
+
+.note-card p,
+.note-card li {
+  margin: 0;
+  color: #89868c;
+  font-size: 0.52rem;
+  line-height: 1.4;
+}
+
+.note-card ul {
+  margin: 0.18rem 0 0;
+  padding-left: 0.8rem;
+}
+
+.note-card-media {
+  height: 2.55rem;
+  margin: 0 0.7rem 0.25rem;
+  border-radius: 0.08rem;
+}
+
+.note-card-media.is-desk {
+  background: linear-gradient(150deg, rgb(237 229 218 / 35%), rgb(177 156 133 / 65%)), repeating-linear-gradient(167deg, transparent 0 0.42rem, rgb(255 255 255 / 35%) 0.43rem 0.53rem), linear-gradient(25deg, #c5b6a7 0 25%, #e9dfd3 26% 55%, #a7907f 56% 100%);
+}
+
+.note-card-media.is-paper {
+  background: linear-gradient(25deg, rgb(115 84 53 / 20%), transparent 50%), repeating-linear-gradient(3deg, #ded0bb 0 0.15rem, #f3ebdf 0.16rem 0.45rem), #dbc4a7;
+}
+
+.note-card-footer {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  min-height: 1.55rem;
+  padding: 0 0.7rem;
+  border-top: 1px solid #f1f0f1;
+  color: #3e3b43;
+  font-size: 0.46rem;
+}
+
+.note-card-footer time {
+  margin-left: auto;
+  color: #77747b;
+}
+
+.note-author-avatar {
+  display: inline-grid;
+  width: 0.72rem;
+  height: 0.72rem;
+  place-items: center;
+  border-radius: 50%;
+  background: #6e786d;
+  color: #fff;
+  font-size: 0.33rem;
+  font-weight: 700;
+}
+
+.notes-empty-state {
+  margin: 1rem 0;
+  color: #8b8990;
+  font-size: 0.72rem;
+  text-align: center;
+}
+
+@media (max-width: 52rem) {
+  .notes-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 38rem) {
+  .notes-main { padding: 1rem; }
+  .notes-header { align-items: flex-start; flex-direction: column; }
+  .notes-toolbar { width: 100%; flex-wrap: wrap; }
+  .notes-grid { grid-template-columns: 1fr; }
+}
