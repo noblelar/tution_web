@@ -1730,10 +1730,10 @@
   width: min(44rem, 100%);
   max-height: min(44rem, calc(100vh - 2rem));
   overflow: auto;
-  border: 1px solid #f1eff0;
-  border-radius: 0.8rem;
+  border: 1px solid #dfe3e8;
+  border-radius: 0.9rem;
   background: #fff;
-  box-shadow: 0 1.4rem 3.5rem rgb(31 28 38 / 22%);
+  box-shadow: 0 1.5rem 4rem rgb(31 28 38 / 24%);
 }
 
 .form-dialog-header {
@@ -1744,9 +1744,10 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 1rem;
-  padding: 1rem 1rem 0.85rem;
-  border-bottom: 1px solid #f2f1f2;
+  padding: 1.15rem 1.25rem 1rem;
+  border-bottom: 1px solid #dfe3e8;
   background: #fff;
+  box-shadow: 0 1px 0 rgb(15 23 42 / 3%);
 }
 
 .form-dialog-header h2,
@@ -1898,6 +1899,7 @@
 .dialog-actions {
   display: flex;
   justify-content: flex-end;
+  gap: 0.65rem;
   padding-top: 0.2rem;
 }
 

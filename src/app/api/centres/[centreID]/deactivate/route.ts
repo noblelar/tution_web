@@ -15,5 +15,9 @@ export async function POST(request: NextRequest, context: RouteParameters) {
   const call = await callProtectedBackend(request, `/v1/centres/${encodeURIComponent(centreID)}/deactivate`, {
     method: "POST",
   });
-  return protectedJsonResponse(call, (result) => mapManagedCentre(result as BackendManagedCentre));
+  return protectedJsonResponse(
+    call,
+    (result) => mapManagedCentre(result as BackendManagedCentre),
+    "The centre could not be deactivated.",
+  );
 }

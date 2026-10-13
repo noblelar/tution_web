@@ -12,7 +12,11 @@ import { protectedJsonResponse } from "@/lib/server-bff";
 
 export async function GET(request: NextRequest) {
   const call = await callProtectedBackend(request, "/v1/centres", { method: "GET" });
-  return protectedJsonResponse(call, (body) => mapCentreList(body as BackendCentreList));
+  return protectedJsonResponse(
+    call,
+    (body) => mapCentreList(body as BackendCentreList),
+    "Centres could not be loaded.",
+  );
 }
 
 export async function POST(request: NextRequest) {
@@ -47,5 +51,9 @@ export async function POST(request: NextRequest) {
       timeZone: input.timeZone,
     })),
   });
-  return protectedJsonResponse(call, (result) => mapManagedCentre(result as BackendManagedCentre));
+  return protectedJsonResponse(
+    call,
+    (result) => mapManagedCentre(result as BackendManagedCentre),
+    "The centre could not be created.",
+  );
 }

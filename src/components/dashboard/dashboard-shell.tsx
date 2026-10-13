@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Icon, type IconName } from "./icons";
 
 export type DashboardNavItem = {
@@ -58,6 +58,8 @@ export function DashboardShell({
   const [loggingOutEverywhere, setLoggingOutEverywhere] = useState(false);
   const [guardState, setGuardState] = useState<"checking" | "allowed" | "unavailable">("checking");
   const [guardAttempt, setGuardAttempt] = useState(0);
+  const accountMenuRef = useRef<HTMLDivElement>(null);
+  const accountMenuTriggerRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     let active = true;
@@ -96,6 +98,45 @@ export function DashboardShell({
       active = false;
     };
   }, [defaultDisplayName, guardAttempt, homeHref, router]);
+
+  useEffect(() => {
+    if (!accountMenuOpen) return;
+
+    function isInsideAccountMenu(target: EventTarget | null): boolean {
+      return target instanceof Node && accountMenuRef.current?.contains(target) === true;
+    }
+
+    function handlePointerDown(event: PointerEvent) {
+      if (!isInsideAccountMenu(event.target)) setAccountMenuOpen(false);
+    }
+
+    function handleFocusIn(event: FocusEvent) {
+      if (!isInsideAccountMenu(event.target)) setAccountMenuOpen(false);
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key !== "Escape") return;
+      event.preventDefault();
+      setAccountMenuOpen(false);
+      accountMenuTriggerRef.current?.focus();
+    }
+
+    function handleWindowBlur() {
+      setAccountMenuOpen(false);
+    }
+
+    document.addEventListener("pointerdown", handlePointerDown, true);
+    document.addEventListener("focusin", handleFocusIn, true);
+    document.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("blur", handleWindowBlur);
+
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown, true);
+      document.removeEventListener("focusin", handleFocusIn, true);
+      document.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("blur", handleWindowBlur);
+    };
+  }, [accountMenuOpen]);
 
   const initial = displayName.trim().charAt(0).toUpperCase() || "S";
 
@@ -177,7 +218,7 @@ export function DashboardShell({
               <span className="dashboard-notification-dot" />
               <Icon name="activity" size={17} />
             </button>
-            <div className="dashboard-account-menu-wrap">
+            <div className="dashboard-account-menu-wrap" ref={accountMenuRef}>
               <button
                 aria-expanded={accountMenuOpen}
                 aria-haspopup="menu"
@@ -186,6 +227,7 @@ export function DashboardShell({
                   setAccountMenuOpen((open) => !open);
                   setLogoutError("");
                 }}
+                ref={accountMenuTriggerRef}
                 type="button"
               >
                 <span className="dashboard-profile-avatar">{initial}</span>

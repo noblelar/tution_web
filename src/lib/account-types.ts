@@ -14,6 +14,16 @@ export type Invitation = {
   id: string;
   status: string;
   expiresAt: string;
+  emailDelivery?: InvitationEmailDelivery;
+};
+
+export type InvitationEmailDelivery = {
+  status: "pending" | "smtp_accepted" | "failed" | "unavailable";
+  attemptCount: number;
+  lastAttemptedAt?: string;
+  smtpAcceptedAt?: string;
+  failedAt?: string;
+  failureCategory?: string;
 };
 
 export type ManagedAccount = {
@@ -27,7 +37,10 @@ export type ManagedAccount = {
   roles: RoleGrant[];
   centres: Centre[];
   invitation?: Invitation;
+  emailVerified: boolean;
   mfaEnabled: boolean;
+  pendingDeletionEligible: boolean;
+  pendingDeletionReason?: string;
 };
 
 export type InvitationDelivery = {
@@ -39,6 +52,18 @@ export type InvitationDelivery = {
 export type AccountManagementContext = {
   centres: Centre[];
   assignableRoles: string[];
+  roleCompositionRoles: string[];
+  capabilities: {
+    canCreateManagers: boolean;
+    canDeletePendingManagers: boolean;
+    canManageRoles: boolean;
+    canAssignOwner: boolean;
+    canAssignManager: boolean;
+    canAssignTutor: boolean;
+    canRemoveOwner: boolean;
+    canRemoveManager: boolean;
+    canRemoveTutor: boolean;
+  };
   canResetMFA: boolean;
   actorUserId: string;
 };
@@ -46,9 +71,11 @@ export type AccountManagementContext = {
 export type ProvisionAccountResult = {
   account: ManagedAccount;
   invitation: InvitationDelivery;
+  emailDelivery?: InvitationEmailDelivery;
 };
 
 export type AccountLifecycleResult = {
   account: ManagedAccount;
   invitation?: InvitationDelivery;
+  emailDelivery?: InvitationEmailDelivery;
 };

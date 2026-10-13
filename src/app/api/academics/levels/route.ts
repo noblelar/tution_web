@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
+import { BackendStageThreeReadiness, mapStageThreeReadiness } from "@/lib/server-stage-three-readiness";
+
 import {
   BackendAcademicLevel,
   BackendAcademicLevelList,
@@ -10,6 +12,17 @@ import { callProtectedBackend, verifyMutationRequest } from "@/lib/server-auth";
 import { protectedJsonResponse } from "@/lib/server-bff";
 
 export async function GET(request: NextRequest) {
+  if (request.nextUrl.searchParams.get("readiness") === "stage-three") {
+    const centreId = request.nextUrl.searchParams.get("centreId")?.trim();
+    if (!centreId) return NextResponse.json({ error: "Management centre is required." }, { status: 400 });
+    const call = await callProtectedBackend(
+      request,
+      `/v1/academics/stage-three/readiness?centre_id=${encodeURIComponent(centreId)}`,
+      { method: "GET" },
+    );
+    return protectedJsonResponse(call, (body) => mapStageThreeReadiness(body as BackendStageThreeReadiness));
+  }
+
   const centreId = request.nextUrl.searchParams.get("centreId")?.trim();
   if (!centreId) return NextResponse.json({ error: "Management centre is required." }, { status: 400 });
   const call = await callProtectedBackend(request, `/v1/academics/levels?centre_id=${encodeURIComponent(centreId)}`, { method: "GET" });

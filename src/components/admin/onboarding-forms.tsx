@@ -4,7 +4,7 @@ import { FormEvent, useEffect, useState } from "react";
 
 import { FormDialog } from "@/components/ui/form-dialog";
 import type { Centre } from "@/lib/account-types";
-import type { ParentProfile } from "@/lib/profile-types";
+import type { ParentProfile, TutorOnboardingResult } from "@/lib/profile-types";
 
 type OnboardingDialogProps = {
   open: boolean;
@@ -200,15 +200,24 @@ export function ParentStudentOnboardingDialog({ open, onOpenChange, onCreated }:
 }
 
 export function TutorOnboardingDialog({ open, onOpenChange, onCreated }: OnboardingDialogProps) {
-  const { centres, error: centreError } = useCentres(open);
+  const { centres, error: centreError } = useCentres(
+    open,
+    "/api/profiles/onboarding/tutors?context=management",
+  );
   const [status, setStatus] = useState<FormStatus>(initialStatus);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setStatus({ error: "", success: "", submitting: true });
     try {
-      await postOnboarding("/api/profiles/onboarding/tutors", formObject(event.currentTarget));
-      setStatus({ error: "", success: "Tutor profile created.", submitting: false });
+      const result = (await postOnboarding(
+        "/api/profiles/onboarding/tutors",
+        formObject(event.currentTarget),
+      )) as TutorOnboardingResult;
+      const success = result.invitation.emailDelivery.status === "failed"
+        ? "Tutor created, but the activation email could not be sent. Retry the invitation from tutor management."
+        : "Tutor created and the activation email was accepted for delivery.";
+      setStatus({ error: "", success, submitting: false });
       event.currentTarget.reset();
       onCreated?.();
     } catch (error) {
@@ -352,7 +361,7 @@ function StatusMessages({ centreError, status }: { centreError: string; status: 
   );
 }
 
-function useCentres(open: boolean) {
+function useCentres(open: boolean, endpoint = "/api/users/context") {
   const [centres, setCentres] = useState<Centre[]>([]);
   const [error, setError] = useState("");
 
@@ -363,7 +372,7 @@ function useCentres(open: boolean) {
     async function loadCentres() {
       setError("");
       try {
-        const response = await fetch("/api/users/context", { cache: "no-store" });
+        const response = await fetch(endpoint, { cache: "no-store" });
         const result = (await response.json()) as { centres?: Centre[]; error?: string };
         if (!response.ok) throw new Error(result.error ?? "Centres could not be loaded.");
         if (active) setCentres(result.centres ?? []);
@@ -376,7 +385,7 @@ function useCentres(open: boolean) {
     return () => {
       active = false;
     };
-  }, [open]);
+  }, [endpoint, open]);
 
   return { centres, error };
 }

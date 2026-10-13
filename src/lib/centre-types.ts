@@ -1,3 +1,5 @@
+export type CentreStatus = "active" | "inactive";
+
 export type ManagedCentre = {
   id: string;
   organizationId: string;
@@ -5,7 +7,7 @@ export type ManagedCentre = {
   name: string;
   address: string;
   timeZone: string;
-  status: "active" | "inactive";
+  status: CentreStatus;
 };
 
 export type CentreList = {
@@ -17,4 +19,18 @@ export type CentreFormValues = {
   name: string;
   address: string;
   timeZone: string;
+};
+
+export type CentreAccessRole = {
+  roleKey: string;
+  assignmentScope: string;
+  centreId?: string;
+};
+
+export type CentreManagementCapabilities = {
+  canView: boolean;
+  canCreate: boolean;
+  canEdit: boolean;
+  canManageStatus: boolean;
+  canDelete: boolean;
 };

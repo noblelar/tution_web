@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { BackendInvitationDelivery, mapInvitationDelivery } from "@/lib/server-accounts";
+import { BackendProvisionResult, mapProvisionResult } from "@/lib/server-accounts";
 import { callProtectedBackend, verifyMutationRequest } from "@/lib/server-auth";
 import { protectedJsonResponse } from "@/lib/server-bff";
 
@@ -26,7 +26,7 @@ export async function POST(request: NextRequest, context: RouteParameters) {
     method: "POST",
     body: JSON.stringify({ centre_id: centreId }),
   });
-  return protectedJsonResponse(call, (body) => mapInvitationDelivery(body as BackendInvitationDelivery));
+  return protectedJsonResponse(call, (body) => mapProvisionResult(body as BackendProvisionResult));
 }
 
 export async function DELETE(request: NextRequest, context: RouteParameters) {

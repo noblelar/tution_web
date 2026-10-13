@@ -44,7 +44,9 @@ export function CentreManagement() {
     const response = await fetch("/api/centres", { cache: "no-store" });
     const result = (await response.json()) as { centres?: ManagedCentre[] } & ApiError;
     if (!response.ok) throw new Error(result.error ?? "Centres could not be loaded.");
-    setCentres(result.centres ?? []);
+    const loadedCentres = result.centres ?? [];
+    setCentres(loadedCentres);
+    return loadedCentres;
   }, []);
 
   useEffect(() => {
@@ -68,7 +70,12 @@ export function CentreManagement() {
       }
 
       try {
-        await loadCentres();
+        const loadedCentres = await loadCentres();
+        const isOwner = userResult.user.roles.some((role) => normalizedRoleKey(role) === "owner");
+        if (!loadedCentres.length && isOwner) {
+          setNotice("Complete organization setup by creating your first centre.");
+          setDialogOpen(true);
+        }
       } catch (caught) {
         if (!cancelled) setError(caught instanceof Error ? caught.message : "Centres could not be loaded.");
       } finally {
@@ -132,6 +139,7 @@ export function CentreManagement() {
     setNotice("");
     setPendingAction("save-centre");
     try {
+      const creatingFirstCentre = !editingCentre && centres.length === 0;
       const csrf = await csrfToken();
       const path = editingCentre ? `/api/centres/${encodeURIComponent(editingCentre.id)}` : "/api/centres";
       const response = await fetch(path, {
@@ -142,7 +150,7 @@ export function CentreManagement() {
       const result = (await response.json()) as ManagedCentre & ApiError;
       if (!response.ok) throw new Error(result.error ?? "The centre could not be saved.");
       setDialogOpen(false);
-      setNotice(editingCentre ? "Centre updated." : "Centre created.");
+      setNotice(editingCentre ? "Centre updated." : creatingFirstCentre ? "First centre created. Organization setup is complete." : "Centre created.");
       await loadCentres();
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "The centre could not be saved.");
@@ -244,7 +252,13 @@ export function CentreManagement() {
         ) : null}
         {error ? <p className="form-error action-error" role="alert">{error}</p> : null}
         {loading ? <p className="loading-state">Loading centres…</p> : null}
-        {!loading && filteredCentres.length === 0 ? <p className="empty-state">No centres match this view yet.</p> : null}
+        {!loading && filteredCentres.length === 0 ? (
+          <p className="empty-state">
+            {centres.length === 0 && canManageCentres
+              ? "No centres have been created. Add the first centre to complete organization setup."
+              : "No centres match this view yet."}
+          </p>
+        ) : null}
 
         <div className="centre-cards">
           {filteredCentres.map((centre) => (
@@ -298,38 +312,82 @@ export function CentreManagement() {
       <FormDialog
         open={dialogOpen}
         title={editingCentre ? "Edit centre" : "Add centre"}
-        description="Use the official centre name and full address that staff should recognize."
+        description={centres.length === 0 ? "Create the first operational centre for this organization." : "Use the official centre name and full address that staff should recognize."}
         onOpenChange={setDialogOpen}
       >
         <form
-          className="account-form"
+          className="grid gap-5 px-5 py-5 sm:px-6 sm:py-6"
           onSubmit={(event) => {
             event.preventDefault();
             void saveCentre();
           }}
         >
-        <div className="field-row">
-          <label>
-            Centre code
-            <input name="code" required maxLength={16} value={formValues.code} onChange={updateForm} />
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <label className="grid gap-2 text-sm font-semibold text-slate-800">
+              Centre code
+              <input
+                className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-3 font-normal text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20"
+                name="code"
+                required
+                maxLength={16}
+                value={formValues.code}
+                onChange={updateForm}
+              />
+            </label>
+            <label className="grid gap-2 text-sm font-semibold text-slate-800">
+              Time zone
+              <input
+                className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-3 font-normal text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20"
+                name="timeZone"
+                required
+                maxLength={64}
+                value={formValues.timeZone}
+                onChange={updateForm}
+              />
+            </label>
+          </div>
+          <label className="grid gap-2 text-sm font-semibold text-slate-800">
+            Centre name
+            <input
+              className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-3 font-normal text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20"
+              name="name"
+              required
+              maxLength={160}
+              value={formValues.name}
+              onChange={updateForm}
+            />
           </label>
-          <label>
-            Time zone
-            <input name="timeZone" required maxLength={64} value={formValues.timeZone} onChange={updateForm} />
+          <label className="grid gap-2 text-sm font-semibold text-slate-800">
+            Centre address
+            <textarea
+              className="w-full resize-y rounded-lg border border-slate-300 bg-white px-3.5 py-3 font-normal text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20"
+              name="address"
+              required
+              maxLength={500}
+              rows={4}
+              value={formValues.address}
+              onChange={updateForm}
+            />
           </label>
-        </div>
-        <label>
-          Centre name
-          <input name="name" required maxLength={160} value={formValues.name} onChange={updateForm} />
-        </label>
-        <label>
-          Centre address
-          <textarea name="address" required maxLength={500} rows={4} value={formValues.address} onChange={updateForm} />
-        </label>
-        {error ? <p className="form-error" role="alert">{error}</p> : null}
-          <div className="dialog-actions">
-            <button disabled={pendingAction === "save-centre"} type="button" onClick={() => setDialogOpen(false)}>Cancel</button>
-            <button className="primary-button" disabled={pendingAction === "save-centre"} type="submit">
+          {error ? (
+            <p className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700" role="alert">
+              {error}
+            </p>
+          ) : null}
+          <div className="-mx-5 -mb-5 mt-1 flex flex-col-reverse gap-3 border-t border-slate-200 bg-slate-50/70 px-5 py-4 sm:-mx-6 sm:-mb-6 sm:flex-row sm:justify-end sm:px-6">
+            <button
+              className="inline-flex min-h-11 w-full items-center justify-center rounded-lg border border-slate-300 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-slate-400 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500/40 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+              disabled={pendingAction === "save-centre"}
+              type="button"
+              onClick={() => setDialogOpen(false)}
+            >
+              Cancel
+            </button>
+            <button
+              className="inline-flex min-h-11 w-full items-center justify-center rounded-lg border border-transparent bg-[#ff4b12] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#e6400c] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500/40 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+              disabled={pendingAction === "save-centre"}
+              type="submit"
+            >
               {pendingAction === "save-centre" ? "Saving…" : editingCentre ? "Save changes" : "Create centre"}
             </button>
           </div>

@@ -34,9 +34,7 @@ export async function POST(request: NextRequest) {
     typeof input.firstName !== "string" ||
     typeof input.lastName !== "string" ||
     typeof input.email !== "string" ||
-    typeof input.centreId !== "string" ||
-    !Array.isArray(input.roleKeys) ||
-    !input.roleKeys.every((role) => typeof role === "string")
+    typeof input.centreId !== "string"
   ) {
     return NextResponse.json({ error: "Account details are invalid." }, { status: 400 });
   }
@@ -46,7 +44,6 @@ export async function POST(request: NextRequest) {
     email: input.email,
     phone_number: typeof input.phoneNumber === "string" && input.phoneNumber.trim() ? input.phoneNumber : undefined,
     centre_id: input.centreId,
-    role_keys: input.roleKeys,
   };
   const call = await callProtectedBackend(request, "/v1/users", {
     method: "POST",

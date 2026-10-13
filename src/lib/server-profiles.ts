@@ -8,7 +8,13 @@ import {
   ProfileAdminContext,
   StudentProfile,
   StudentProfileList,
+  TutorProfile,
+  TutorProfileList,
+  TutorInvitation,
+  TutorManagementContext,
+  TutorOnboardingResult,
 } from "@/lib/profile-types";
+import { BackendManagedAccount, mapManagedAccount } from "@/lib/server-accounts";
 
 export type BackendParentStudentLink = {
   id: string;
@@ -47,6 +53,80 @@ export type BackendParentProfile = {
 
 export type BackendParentProfileList = {
   parents: BackendParentProfile[];
+};
+
+export type BackendTutorProfile = {
+  id: string;
+  organization_id: string;
+  user_id: string;
+  primary_centre_id?: string;
+  primary_centre_name?: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  preferred_name?: string;
+  phone_number?: string;
+  account_status: string;
+  email_verified: boolean;
+  mfa_enabled: boolean;
+  mfa_required: boolean;
+  profile_status: string;
+  pending_deletion_eligible?: boolean;
+  pending_deletion_reason?: string;
+  invitation?: {
+    id: string;
+    status: string;
+    expires_at: string;
+    email_delivery?: {
+      status: "pending" | "smtp_accepted" | "failed";
+      attempt_count: number;
+      last_attempted_at?: string;
+      smtp_accepted_at?: string;
+      failed_at?: string;
+      failure_category?: string;
+    };
+  };
+};
+
+export type BackendTutorProfileList = {
+  tutors: BackendTutorProfile[];
+};
+
+export type BackendTutorInvitation = {
+  id: string;
+  status: string;
+  expires_at: string;
+  email_delivery: {
+    status: "pending" | "smtp_accepted" | "failed";
+    attempt_count: number;
+    last_attempted_at?: string;
+    smtp_accepted_at?: string;
+    failed_at?: string;
+    failure_category?: string;
+  };
+};
+
+export type BackendTutorOnboardingResult = {
+  account: BackendManagedAccount;
+  tutor: BackendTutorProfile;
+  invitation: BackendTutorInvitation;
+};
+
+export type BackendTutorManagementContext = {
+  centres: Array<{
+    id: string;
+    code: string;
+    name: string;
+  }>;
+  can_onboard_tutors: boolean;
+  can_manage_invitations: boolean;
+  can_suspend_tutors: boolean;
+  can_restore_suspended_tutors: boolean;
+  can_disable_tutors: boolean;
+  can_restore_disabled_tutors: boolean;
+  can_reset_tutor_mfa: boolean;
+  can_delete_pending_tutors?: boolean;
+  actor_user_id: string;
 };
 
 export type BackendStudentProfile = {
@@ -138,6 +218,92 @@ export function mapParentProfile(parent: BackendParentProfile): ParentProfile {
 
 export function mapParentProfileList(list: BackendParentProfileList): ParentProfileList {
   return { parents: list.parents.map(mapParentProfile) };
+}
+
+export function mapTutorProfile(tutor: BackendTutorProfile): TutorProfile {
+  return {
+    id: tutor.id,
+    organizationId: tutor.organization_id,
+    userId: tutor.user_id,
+    primaryCentreId: tutor.primary_centre_id,
+    primaryCentreName: tutor.primary_centre_name,
+    firstName: tutor.first_name,
+    lastName: tutor.last_name,
+    email: tutor.email,
+    preferredName: tutor.preferred_name,
+    phoneNumber: tutor.phone_number,
+    accountStatus: tutor.account_status,
+    emailVerified: tutor.email_verified,
+    mfaEnabled: tutor.mfa_enabled,
+    mfaRequired: tutor.mfa_required,
+    profileStatus: tutor.profile_status,
+    pendingDeletionEligible: tutor.pending_deletion_eligible === true,
+    pendingDeletionReason: tutor.pending_deletion_reason,
+    invitation: tutor.invitation
+      ? {
+          id: tutor.invitation.id,
+          status: tutor.invitation.status,
+          expiresAt: tutor.invitation.expires_at,
+          emailDelivery: tutor.invitation.email_delivery
+            ? {
+                status: tutor.invitation.email_delivery.status,
+                attemptCount: tutor.invitation.email_delivery.attempt_count,
+                lastAttemptedAt: tutor.invitation.email_delivery.last_attempted_at,
+                smtpAcceptedAt: tutor.invitation.email_delivery.smtp_accepted_at,
+                failedAt: tutor.invitation.email_delivery.failed_at,
+                failureCategory: tutor.invitation.email_delivery.failure_category,
+              }
+            : undefined,
+        }
+      : undefined,
+  };
+}
+
+export function mapTutorProfileList(list: BackendTutorProfileList): TutorProfileList {
+  return { tutors: list.tutors.map(mapTutorProfile) };
+}
+
+export function mapTutorOnboardingResult(result: BackendTutorOnboardingResult): TutorOnboardingResult {
+  return {
+    account: mapManagedAccount(result.account),
+    tutor: mapTutorProfile(result.tutor),
+    invitation: mapTutorInvitation(result.invitation),
+  };
+}
+
+export function mapTutorInvitation(invitation: BackendTutorInvitation): TutorInvitation {
+  return {
+    id: invitation.id,
+    status: invitation.status,
+    expiresAt: invitation.expires_at,
+    emailDelivery: {
+      status: invitation.email_delivery.status,
+      attemptCount: invitation.email_delivery.attempt_count,
+      lastAttemptedAt: invitation.email_delivery.last_attempted_at,
+      smtpAcceptedAt: invitation.email_delivery.smtp_accepted_at,
+      failedAt: invitation.email_delivery.failed_at,
+      failureCategory: invitation.email_delivery.failure_category,
+    },
+  };
+}
+
+export function mapTutorManagementContext(context: BackendTutorManagementContext): TutorManagementContext {
+  return {
+    centres: (context.centres ?? []).map((centre) => ({
+      id: centre.id,
+      code: centre.code,
+      name: centre.name,
+    })),
+    canOnboardTutors: context.can_onboard_tutors,
+    canManageInvitations: context.can_manage_invitations,
+    canSuspendTutors: context.can_suspend_tutors,
+    canRestoreSuspendedTutors: context.can_restore_suspended_tutors,
+    canDisableTutors: context.can_disable_tutors,
+    canRestoreDisabledTutors: context.can_restore_disabled_tutors,
+    canResetTutorMFA: context.can_reset_tutor_mfa,
+    canDeletePendingTutors: context.can_delete_pending_tutors === true,
+    actorUserId: context.actor_user_id,
+  };
 }
 
 export function mapStudentProfile(student: BackendStudentProfile): StudentProfile {

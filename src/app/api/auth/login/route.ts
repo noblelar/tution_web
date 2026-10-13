@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import {
   BackendTokenPair,
   BackendMFARequired,
+  backendErrorMessage,
   callBackend,
   clearSessionCookies,
   mapUser,
@@ -58,9 +59,25 @@ export async function POST(request: NextRequest) {
     return response;
   }
   if (!backendResponse.ok) {
+    const suspended = backendResponse.status === 403;
     return NextResponse.json(
-      { error: publicBackendError(backendResponse.status) },
-      { status: backendResponse.status === 429 ? 429 : backendResponse.status === 401 ? 401 : 503 },
+      {
+        error: suspended
+          ? await backendErrorMessage(
+              backendResponse,
+              "Your account has been suspended. Contact administrator.",
+            )
+          : publicBackendError(backendResponse.status),
+      },
+      {
+        status: suspended
+          ? 403
+          : backendResponse.status === 429
+            ? 429
+            : backendResponse.status === 401
+              ? 401
+              : 503,
+      },
     );
   }
   const pair = (await backendResponse.json()) as BackendTokenPair;

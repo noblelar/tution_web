@@ -1,3 +1,5 @@
+import type { Centre, ManagedAccount } from "@/lib/account-types";
+
 export type ParentStudentLink = {
   id: string;
   parentProfileId: string;
@@ -35,6 +37,73 @@ export type ParentProfile = {
 
 export type ParentProfileList = {
   parents: ParentProfile[];
+};
+
+export type TutorProfile = {
+  id: string;
+  organizationId: string;
+  userId: string;
+  primaryCentreId?: string;
+  primaryCentreName?: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  preferredName?: string;
+  phoneNumber?: string;
+  accountStatus: string;
+  emailVerified: boolean;
+  mfaEnabled: boolean;
+  mfaRequired: boolean;
+  profileStatus: string;
+  pendingDeletionEligible: boolean;
+  pendingDeletionReason?: string;
+  invitation?: TutorInvitationStatus;
+};
+
+export type TutorProfileList = {
+  tutors: TutorProfile[];
+};
+
+export type TutorInvitationEmailDelivery = {
+  status: "pending" | "smtp_accepted" | "failed";
+  attemptCount: number;
+  lastAttemptedAt?: string;
+  smtpAcceptedAt?: string;
+  failedAt?: string;
+  failureCategory?: string;
+};
+
+export type TutorInvitation = {
+  id: string;
+  status: string;
+  expiresAt: string;
+  emailDelivery: TutorInvitationEmailDelivery;
+};
+
+export type TutorInvitationStatus = {
+  id: string;
+  status: string;
+  expiresAt: string;
+  emailDelivery?: TutorInvitationEmailDelivery;
+};
+
+export type TutorOnboardingResult = {
+  account: ManagedAccount;
+  tutor: TutorProfile;
+  invitation: TutorInvitation;
+};
+
+export type TutorManagementContext = {
+  centres: Centre[];
+  canOnboardTutors: boolean;
+  canManageInvitations: boolean;
+  canSuspendTutors: boolean;
+  canRestoreSuspendedTutors: boolean;
+  canDisableTutors: boolean;
+  canRestoreDisabledTutors: boolean;
+  canResetTutorMFA: boolean;
+  canDeletePendingTutors: boolean;
+  actorUserId: string;
 };
 
 export type StudentProfile = {

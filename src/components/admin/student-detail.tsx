@@ -1,5 +1,7 @@
 "use client";
 
+import { StudentAcademicPlacement } from "./student-academic-placement";
+
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
@@ -144,6 +146,7 @@ export function StudentDetail({ studentProfileId }: { studentProfileId: string }
           <h2>Family relationship readiness</h2>
           <p>Parent and guardian links will be managed in Phase 4. This student detail view is prepared to show linked adults, relationship type, and permissions for bookings, lessons, reports, and credits.</p>
         </article>
+        <StudentAcademicPlacement preferredCentreId={student.primaryCentreId} studentProfileId={student.id} />
       </section>
     </main>
   );

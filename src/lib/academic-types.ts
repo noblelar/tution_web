@@ -35,6 +35,24 @@ export type AcademicYear = {
   updatedAt: string;
 };
 
+export type TutorCapability = {
+  id: string;
+  organizationId: string;
+  tutorProfileId: string;
+  subjectId: string;
+  subjectName: string;
+  subjectCode: string;
+  subjectStatus: AcademicStatus;
+  academicLevelId: string;
+  academicLevelName: string;
+  academicLevelStatus: AcademicStatus;
+  isPrimarySubject: boolean;
+  status: AcademicStatus;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type AcademicLevelList = { levels: AcademicLevel[] };
 export type SubjectList = { subjects: Subject[] };
 export type AcademicYearList = { academicYears: AcademicYear[] };
+export type TutorCapabilityList = { capabilities: TutorCapability[] };

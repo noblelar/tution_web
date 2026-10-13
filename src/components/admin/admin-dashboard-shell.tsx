@@ -4,6 +4,7 @@ import {
   DashboardShell,
   type DashboardNavItem,
 } from "@/components/dashboard/dashboard-shell";
+import { CentreSetupGate } from "@/components/admin/centre-setup-gate";
 
 const adminNavigation: DashboardNavItem[] = [
   { label: "Dashboard", href: "/app/admin", icon: "grid" },
@@ -30,7 +31,7 @@ export function AdminDashboardShell({ children }: { children: ReactNode }) {
       navigationLabel="Admin navigation"
       searchPlaceholder="Search people, profiles, or actions"
     >
-      {children}
+      <CentreSetupGate>{children}</CentreSetupGate>
     </DashboardShell>
   );
 }

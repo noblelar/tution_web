@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { DashboardShell } from "@/components/dashboard/dashboard-shell";
+import { TutorAccountSettings } from "@/components/tutor-account-settings";
 
 type CurrentUser = {
   user?: {
@@ -13,6 +15,7 @@ export default function AppGatewayPage() {
   const router = useRouter();
   const [unavailable, setUnavailable] = useState(false);
   const [attempt, setAttempt] = useState(0);
+  const [tutorWorkspace, setTutorWorkspace] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -29,7 +32,13 @@ export default function AppGatewayPage() {
           return;
         }
         const result = (await response.json()) as CurrentUser;
-        if (active) router.replace(roleHome(result.user?.roles));
+        const roles = result.user?.roles ?? [];
+        const roleKeys = new Set(roles.map((role) => role.roleKey));
+        if (active && roleKeys.has("tutor") && !roleKeys.has("owner") && !roleKeys.has("manager")) {
+          setTutorWorkspace(true);
+          return;
+        }
+        if (active) router.replace(roleHome(roles));
       } catch {
         if (active) setUnavailable(true);
       }
@@ -39,6 +48,20 @@ export default function AppGatewayPage() {
       active = false;
     };
   }, [attempt, router]);
+
+  if (tutorWorkspace) {
+    return (
+      <DashboardShell
+        defaultDisplayName="Tutor"
+        homeHref="/app"
+        navigation={[{ label: "Account settings", href: "/app", icon: "settings" }]}
+        navigationLabel="Tutor navigation"
+        searchPlaceholder="Search your Tution workspace"
+      >
+        <TutorAccountSettings />
+      </DashboardShell>
+    );
+  }
 
   return (
     <main className="baseline-shell">

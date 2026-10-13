@@ -9,7 +9,28 @@ import {
   setSessionCookies,
 } from "@/lib/server-auth";
 
-const forwardedErrorStatuses = new Set([400, 401, 403, 404, 409, 429]);
+const forwardedErrorStatuses = new Set([400, 401, 403, 404, 409, 422, 429]);
+
+async function protectedErrorResponse(
+  call: ProtectedBackendCall,
+  fallbackError: string,
+): Promise<NextResponse> {
+  const status = forwardedErrorStatuses.has(call.response.status) ? call.response.status : 503;
+  return NextResponse.json(
+    { error: await backendErrorMessage(call.response, fallbackError) },
+    { status },
+  );
+}
+
+function finalizeProtectedResponse(
+  response: NextResponse,
+  call: ProtectedBackendCall,
+): NextResponse {
+  response.headers.set("cache-control", "no-store");
+  if (call.refreshed) setSessionCookies(response, call.refreshed);
+  if (call.sessionInvalid) clearSessionCookies(response);
+  return response;
+}
 
 export async function protectedJsonResponse<T>(
   call: ProtectedBackendCall,
@@ -24,14 +45,17 @@ export async function protectedJsonResponse<T>(
       response = NextResponse.json({ error: fallbackError }, { status: 503 });
     }
   } else {
-    const status = forwardedErrorStatuses.has(call.response.status) ? call.response.status : 503;
-    response = NextResponse.json(
-      { error: await backendErrorMessage(call.response, fallbackError) },
-      { status },
-    );
+    response = await protectedErrorResponse(call, fallbackError);
   }
-  response.headers.set("cache-control", "no-store");
-  if (call.refreshed) setSessionCookies(response, call.refreshed);
-  if (call.sessionInvalid) clearSessionCookies(response);
-  return response;
+  return finalizeProtectedResponse(response, call);
+}
+
+export async function protectedNoContentResponse(
+  call: ProtectedBackendCall,
+  fallbackError = "The account service is temporarily unavailable.",
+): Promise<NextResponse> {
+  const response = call.response.ok
+    ? new NextResponse(null, { status: 204 })
+    : await protectedErrorResponse(call, fallbackError);
+  return finalizeProtectedResponse(response, call);
 }
