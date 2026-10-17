@@ -3,11 +3,14 @@ import "server-only";
 import {
   ParentStudentLink,
   ParentStudentLinkList,
+  ParentStudentOnboardingResult,
+  ParentOnboardingResult,
   ParentProfile,
   ParentProfileList,
   ProfileAdminContext,
   StudentProfile,
   StudentProfileList,
+  StudentOnboardingResult,
   TutorProfile,
   TutorProfileList,
   TutorInvitation,
@@ -21,10 +24,15 @@ export type BackendParentStudentLink = {
   parent_profile_id: string;
   student_profile_id: string;
   relationship_type: string;
+  relationship_description?: string;
   can_view_bookings: boolean;
   can_book_lessons: boolean;
   can_receive_reports: boolean;
   can_manage_credits: boolean;
+  can_receive_communications: boolean;
+  can_collect_student: boolean;
+  can_access_billing: boolean;
+  can_access_academics: boolean;
   link_status: string;
 };
 
@@ -36,6 +44,10 @@ export type BackendParentProfile = {
   id: string;
   organization_id: string;
   user_id: string;
+  account_email?: string;
+  account_status?: string;
+  email_verified?: boolean;
+  invitation?: BackendTutorProfile["invitation"];
   primary_centre_id?: string;
   people_code: string;
   preferred_name?: string;
@@ -53,6 +65,11 @@ export type BackendParentProfile = {
 
 export type BackendParentProfileList = {
   parents: BackendParentProfile[];
+};
+
+export type BackendParentOnboardingResult = {
+  account: BackendManagedAccount;
+  parent: BackendParentProfile;
 };
 
 export type BackendTutorProfile = {
@@ -133,6 +150,10 @@ export type BackendStudentProfile = {
   id: string;
   organization_id: string;
   user_id?: string;
+  account_email?: string;
+  account_status?: string;
+  email_verified?: boolean;
+  invitation?: BackendTutorProfile["invitation"];
   primary_centre_id?: string;
   people_code: string;
   first_name: string;
@@ -153,7 +174,22 @@ export type BackendStudentProfileList = {
   students: BackendStudentProfile[];
 };
 
+export type BackendStudentOnboardingResult = {
+  account?: BackendManagedAccount;
+  student: BackendStudentProfile;
+  parent_link?: BackendParentStudentLink;
+};
+
+export type BackendParentStudentOnboardingResult = {
+  parent_account: BackendManagedAccount;
+  student_account?: BackendManagedAccount;
+  parent: BackendParentProfile;
+  student: BackendStudentProfile;
+  parent_link: BackendParentStudentLink;
+};
+
 export type BackendProfileAdminContext = {
+  can_onboard_profiles: boolean;
   people_code: {
     prefix: string;
     format: string;
@@ -183,10 +219,15 @@ export function mapParentStudentLink(link: BackendParentStudentLink): ParentStud
     parentProfileId: link.parent_profile_id,
     studentProfileId: link.student_profile_id,
     relationshipType: link.relationship_type,
+    relationshipDescription: link.relationship_description,
     canViewBookings: link.can_view_bookings,
     canBookLessons: link.can_book_lessons,
     canReceiveReports: link.can_receive_reports,
     canManageCredits: link.can_manage_credits,
+    canReceiveCommunications: link.can_receive_communications,
+    canCollectStudent: link.can_collect_student,
+    canAccessBilling: link.can_access_billing,
+    canAccessAcademics: link.can_access_academics,
     linkStatus: link.link_status,
   };
 }
@@ -200,6 +241,10 @@ export function mapParentProfile(parent: BackendParentProfile): ParentProfile {
     id: parent.id,
     organizationId: parent.organization_id,
     userId: parent.user_id,
+    accountEmail: parent.account_email,
+    accountStatus: parent.account_status,
+    emailVerified: parent.email_verified === true,
+    invitation: parent.invitation ? mapProfileInvitationStatus(parent.invitation) : undefined,
     primaryCentreId: parent.primary_centre_id,
     peopleCode: parent.people_code,
     preferredName: parent.preferred_name,
@@ -218,6 +263,13 @@ export function mapParentProfile(parent: BackendParentProfile): ParentProfile {
 
 export function mapParentProfileList(list: BackendParentProfileList): ParentProfileList {
   return { parents: list.parents.map(mapParentProfile) };
+}
+
+export function mapParentOnboardingResult(result: BackendParentOnboardingResult): ParentOnboardingResult {
+  return {
+    account: mapManagedAccount(result.account),
+    parent: mapParentProfile(result.parent),
+  };
 }
 
 export function mapTutorProfile(tutor: BackendTutorProfile): TutorProfile {
@@ -254,6 +306,24 @@ export function mapTutorProfile(tutor: BackendTutorProfile): TutorProfile {
                 failureCategory: tutor.invitation.email_delivery.failure_category,
               }
             : undefined,
+        }
+      : undefined,
+  };
+}
+
+function mapProfileInvitationStatus(invitation: NonNullable<BackendTutorProfile["invitation"]>) {
+  return {
+    id: invitation.id,
+    status: invitation.status,
+    expiresAt: invitation.expires_at,
+    emailDelivery: invitation.email_delivery
+      ? {
+          status: invitation.email_delivery.status,
+          attemptCount: invitation.email_delivery.attempt_count,
+          lastAttemptedAt: invitation.email_delivery.last_attempted_at,
+          smtpAcceptedAt: invitation.email_delivery.smtp_accepted_at,
+          failedAt: invitation.email_delivery.failed_at,
+          failureCategory: invitation.email_delivery.failure_category,
         }
       : undefined,
   };
@@ -311,6 +381,10 @@ export function mapStudentProfile(student: BackendStudentProfile): StudentProfil
     id: student.id,
     organizationId: student.organization_id,
     userId: student.user_id,
+    accountEmail: student.account_email,
+    accountStatus: student.account_status,
+    emailVerified: student.email_verified === true,
+    invitation: student.invitation ? mapProfileInvitationStatus(student.invitation) : undefined,
     primaryCentreId: student.primary_centre_id,
     peopleCode: student.people_code,
     firstName: student.first_name,
@@ -332,8 +406,27 @@ export function mapStudentProfileList(list: BackendStudentProfileList): StudentP
   return { students: list.students.map(mapStudentProfile) };
 }
 
+export function mapStudentOnboardingResult(result: BackendStudentOnboardingResult): StudentOnboardingResult {
+  return {
+    account: result.account ? mapManagedAccount(result.account) : undefined,
+    student: mapStudentProfile(result.student),
+    parentLink: result.parent_link ? mapParentStudentLink(result.parent_link) : undefined,
+  };
+}
+
+export function mapParentStudentOnboardingResult(result: BackendParentStudentOnboardingResult): ParentStudentOnboardingResult {
+  return {
+    parentAccount: mapManagedAccount(result.parent_account),
+    studentAccount: result.student_account ? mapManagedAccount(result.student_account) : undefined,
+    parent: mapParentProfile(result.parent),
+    student: mapStudentProfile(result.student),
+    parentLink: mapParentStudentLink(result.parent_link),
+  };
+}
+
 export function mapProfileAdminContext(context: BackendProfileAdminContext): ProfileAdminContext {
   return {
+    canOnboardProfiles: context.can_onboard_profiles,
     peopleCode: {
       prefix: context.people_code.prefix,
       format: context.people_code.format,

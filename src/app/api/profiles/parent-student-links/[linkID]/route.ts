@@ -40,9 +40,16 @@ function updateBody(input: Record<string, unknown>) {
   }
   return {
     relationship_type: input.relationshipType,
+    relationship_description: optionalString(input.relationshipDescription),
     can_view_bookings: input.canViewBookings,
     can_book_lessons: input.canBookLessons,
     can_receive_reports: input.canReceiveReports,
     can_manage_credits: input.canManageCredits,
   };
+}
+
+function optionalString(value: unknown) {
+  if (typeof value !== "string") return undefined;
+  const trimmed = value.trim();
+  return trimmed || undefined;
 }

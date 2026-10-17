@@ -1,11 +1,5 @@
-import { RoutePlaceholder } from "@/components/navigation/route-placeholder";
+import { redirect } from "next/navigation";
 
-export default function ParentSchedulePage() {
-  return (
-    <RoutePlaceholder
-      eyebrow="Parent area"
-      title="Schedule"
-      description="Parent-facing lesson schedules and calendar views will live here."
-    />
-  );
+export default function LegacyParentSchedulePage() {
+  redirect("/app/parent/sessions");
 }

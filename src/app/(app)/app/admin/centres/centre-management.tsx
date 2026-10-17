@@ -52,6 +52,7 @@ export function CentreManagement() {
   useEffect(() => {
     let cancelled = false;
     async function load() {
+      let authenticatedUser: CurrentUser;
       setError("");
       try {
         const userResponse = await fetch("/api/auth/me", { cache: "no-store" });
@@ -59,8 +60,9 @@ export function CentreManagement() {
         if (!userResponse.ok || !userResult.user) {
           throw new Error(userResult.error ?? "Your session could not be verified.");
         }
+        authenticatedUser = userResult.user;
         if (cancelled) return;
-        setCurrentUser(userResult.user);
+        setCurrentUser(authenticatedUser);
       } catch (caught) {
         if (!cancelled) {
           setError(caught instanceof Error ? caught.message : "Your session could not be verified.");
@@ -71,7 +73,7 @@ export function CentreManagement() {
 
       try {
         const loadedCentres = await loadCentres();
-        const isOwner = userResult.user.roles.some((role) => normalizedRoleKey(role) === "owner");
+        const isOwner = authenticatedUser.roles.some((role) => normalizedRoleKey(role) === "owner");
         if (!loadedCentres.length && isOwner) {
           setNotice("Complete organization setup by creating your first centre.");
           setDialogOpen(true);

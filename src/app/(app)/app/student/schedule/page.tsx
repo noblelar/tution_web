@@ -1,5 +1,5 @@
-import { ScheduleView } from "@/components/schedule";
+import { redirect } from "next/navigation";
 
-export default function SchedulePage() {
-  return <ScheduleView />;
+export default function LegacyStudentSchedulePage() {
+  redirect("/app/student/sessions");
 }

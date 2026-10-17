@@ -54,7 +54,10 @@ export default function AppGatewayPage() {
       <DashboardShell
         defaultDisplayName="Tutor"
         homeHref="/app"
-        navigation={[{ label: "Account settings", href: "/app", icon: "settings" }]}
+        navigation={[
+          { label: "Account settings", href: "/app", icon: "settings" },
+          { label: "Attendance", href: "/app/attendance", icon: "check" },
+        ]}
         navigationLabel="Tutor navigation"
         searchPlaceholder="Search your Tution workspace"
       >
@@ -80,5 +83,6 @@ function roleHome(roles: Array<{ roleKey: string }> = []): string {
   if (roleKeys.has("owner") || roleKeys.has("manager")) return "/app/admin";
   if (roleKeys.has("parent")) return "/app/parent";
   if (roleKeys.has("student")) return "/app/student";
+  if (roleKeys.has("tutor")) return "/app";
   return "/login";
 }

@@ -9,12 +9,7 @@ import {
 
 import { callProtectedBackend, verifyMutationRequest } from "@/lib/server-auth";
 import { protectedJsonResponse } from "@/lib/server-bff";
-import { BackendParentStudentLink, BackendStudentProfile, mapParentStudentLink, mapStudentProfile } from "@/lib/server-profiles";
-
-type StudentOnboardingResult = {
-  student: BackendStudentProfile;
-  parent_link?: BackendParentStudentLink;
-};
+import { BackendStudentOnboardingResult, mapStudentOnboardingResult } from "@/lib/server-profiles";
 
 export async function GET(request: NextRequest) {
   const studentProfileId = request.nextUrl.searchParams.get("placementsFor")?.trim();
@@ -108,13 +103,7 @@ export async function POST(request: NextRequest) {
     body: JSON.stringify(studentOnboardingBody(body)),
   });
 
-  return protectedJsonResponse(call, (result) => {
-    const value = result as StudentOnboardingResult;
-    return {
-      student: mapStudentProfile(value.student),
-      parentLink: value.parent_link ? mapParentStudentLink(value.parent_link) : undefined,
-    };
-  });
+  return protectedJsonResponse(call, (result) => mapStudentOnboardingResult(result as BackendStudentOnboardingResult));
 }
 
 export function studentOnboardingBody(input: Record<string, unknown>) {
@@ -126,6 +115,7 @@ export function studentOnboardingBody(input: Record<string, unknown>) {
     centre_id: stringValue(input.centreId),
     parent_profile_id: optionalString(input.parentProfileId),
     relationship_type: optionalString(input.relationshipType),
+    relationship_description: optionalString(input.relationshipDescription),
     preferred_name: optionalString(input.preferredName),
     date_of_birth: stringValue(input.dateOfBirth),
     gender: optionalString(input.gender),

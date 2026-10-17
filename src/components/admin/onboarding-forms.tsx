@@ -3,8 +3,15 @@
 import { FormEvent, useEffect, useState } from "react";
 
 import { FormDialog } from "@/components/ui/form-dialog";
-import type { Centre } from "@/lib/account-types";
-import type { ParentProfile, TutorOnboardingResult } from "@/lib/profile-types";
+import type { Centre, ManagedAccount } from "@/lib/account-types";
+import type {
+  ParentOnboardingResult,
+  ParentProfile,
+  ParentStudentOnboardingResult,
+  StudentOnboardingResult,
+  TutorOnboardingResult,
+} from "@/lib/profile-types";
+import { otherRelationshipPattern, studentEmailRequired } from "@/lib/profile-onboarding-rules";
 
 type OnboardingDialogProps = {
   open: boolean;
@@ -28,30 +35,39 @@ export function ParentOnboardingDialog({ open, onOpenChange, onCreated }: Onboar
   const { centres, error: centreError } = useCentres(open);
   const [status, setStatus] = useState<FormStatus>(initialStatus);
 
+  function changeOpen(nextOpen: boolean) {
+    if (!nextOpen) setStatus(initialStatus);
+    onOpenChange(nextOpen);
+  }
+
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const form = event.currentTarget;
     setStatus({ error: "", success: "", submitting: true });
-    const body = formObject(event.currentTarget);
+    const body = formObject(form);
     try {
-      await postOnboarding("/api/profiles/onboarding/parents", body);
-      setStatus({ error: "", success: "Parent profile created.", submitting: false });
-      event.currentTarget.reset();
-      onCreated?.();
+      const result = (await postOnboarding("/api/profiles/onboarding/parents", body)) as ParentOnboardingResult;
+      setStatus({ error: "", success: activationOutcome("Parent", result.account), submitting: false });
     } catch (error) {
       setStatus({ error: errorMessage(error), success: "", submitting: false });
+      return;
     }
+
+    form.reset();
+    onCreated?.();
+    changeOpen(false);
   }
 
   return (
     <FormDialog
       description="Create the parent identity, parent profile, people code, and invitation in one manager-led workflow."
-      onOpenChange={onOpenChange}
+      onOpenChange={changeOpen}
       open={open}
       title="Onboard parent / guardian"
     >
       <form className="onboarding-form" onSubmit={submit}>
         <StatusMessages centreError={centreError} status={status} />
-        <PersonFields />
+        <PersonFields phoneRequired />
         <CentreField centres={centres} />
         <AddressFields />
         <ConsentFields />
@@ -64,34 +80,93 @@ export function ParentOnboardingDialog({ open, onOpenChange, onCreated }: Onboar
 export function StudentOnboardingDialog({ open, onOpenChange, onCreated, parents }: StudentDialogProps) {
   const { centres, error: centreError } = useCentres(open);
   const [status, setStatus] = useState<FormStatus>(initialStatus);
+  const [parentProfileId, setParentProfileId] = useState("");
+  const [centreId, setCentreId] = useState("");
+  const [guardianEmail, setGuardianEmail] = useState("");
+  const [matchedGuardian, setMatchedGuardian] = useState<ParentProfile | null>(null);
+  const [guardianLookupError, setGuardianLookupError] = useState("");
+
+  function resetDialogState() {
+    setStatus(initialStatus);
+    setParentProfileId("");
+    setCentreId("");
+    setGuardianEmail("");
+    setMatchedGuardian(null);
+    setGuardianLookupError("");
+  }
+
+  function changeOpen(nextOpen: boolean) {
+    if (!nextOpen) resetDialogState();
+    onOpenChange(nextOpen);
+  }
+
+  async function findGuardian() {
+    setGuardianLookupError("");
+    setMatchedGuardian(null);
+    if (!centreId || !guardianEmail.trim()) {
+      setGuardianLookupError("Select a centre and enter the guardian's exact email address.");
+      return;
+    }
+    try {
+      const response = await fetch(`/api/profiles/parents?email=${encodeURIComponent(guardianEmail.trim())}`, { cache: "no-store" });
+      const result = (await response.json()) as { parents?: ParentProfile[]; error?: string };
+      if (!response.ok) throw new Error(result.error ?? "Guardian lookup failed.");
+      const match = result.parents?.[0] ?? null;
+      if (!match) {
+        setGuardianLookupError("No guardian with that exact email is visible in your permitted centres. Use the parent + student workflow for a new guardian.");
+        return;
+      }
+      setMatchedGuardian(match);
+      setParentProfileId(match.id);
+    } catch (cause) {
+      setGuardianLookupError(cause instanceof Error ? cause.message : "Guardian lookup failed.");
+    }
+  }
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const form = event.currentTarget;
     setStatus({ error: "", success: "", submitting: true });
-    const body = formObject(event.currentTarget);
+    const body = formObject(form);
     try {
-      await postOnboarding("/api/profiles/onboarding/students", {
+      const result = (await postOnboarding("/api/profiles/onboarding/students", {
         ...body,
-        peopleCodeLoginEnabled: true,
-      });
-      setStatus({ error: "", success: "Student profile created.", submitting: false });
-      event.currentTarget.reset();
-      onCreated?.();
+        peopleCodeLoginEnabled: Boolean(body.email),
+      })) as StudentOnboardingResult;
+      setStatus({ error: "", success: activationOutcome("Student", result.account), submitting: false });
     } catch (error) {
       setStatus({ error: errorMessage(error), success: "", submitting: false });
+      return;
     }
+
+    form.reset();
+    onCreated?.();
+    changeOpen(false);
   }
 
   return (
     <FormDialog
       description="Create an independent student with email, or link a no-email student to an existing parent."
-      onOpenChange={onOpenChange}
+      onOpenChange={changeOpen}
       open={open}
       title="Onboard student"
     >
       <form className="onboarding-form" onSubmit={submit}>
         <StatusMessages centreError={centreError} status={status} />
-        <PersonFields emailRequired={false} />
+        <PersonFields emailRequired={studentEmailRequired(parentProfileId)} />
+        <CentreField centres={centres} onChange={(value) => {
+          setCentreId(value);
+          setParentProfileId("");
+          setMatchedGuardian(null);
+          setGuardianLookupError("");
+        }} />
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+          <label className="min-w-0 flex-1">Find existing guardian by exact email
+            <input onChange={(event) => { setGuardianEmail(event.target.value); setMatchedGuardian(null); setParentProfileId(""); }} type="email" value={guardianEmail} />
+          </label>
+          <button className="rounded-lg border border-slate-300 px-4 py-2 font-medium text-slate-800" onClick={findGuardian} type="button">Find guardian</button>
+        </div>
+        {guardianLookupError ? <p className="text-sm text-red-700" role="alert">{guardianLookupError}</p> : null}
         <div className="form-grid">
           <label>
             Date of birth <input name="dateOfBirth" required type="date" />
@@ -101,28 +176,19 @@ export function StudentOnboardingDialog({ open, onOpenChange, onCreated, parents
           </label>
           <label>
             Existing parent / guardian
-            <select name="parentProfileId">
+            <select name="parentProfileId" onChange={(event) => setParentProfileId(event.target.value)} value={parentProfileId}>
               <option value="">No parent selected — email becomes required</option>
-              {parents.map((parent) => (
+              {[...parents, ...(matchedGuardian && !parents.some((parent) => parent.id === matchedGuardian.id) ? [matchedGuardian] : [])].map((parent) => (
                 <option key={parent.id} value={parent.id}>
                   {parent.preferredName ?? parent.peopleCode} · {parent.peopleCode}
                 </option>
               ))}
             </select>
           </label>
-          <label>
-            Relationship type
-            <select defaultValue="guardian" name="relationshipType">
-              <option value="guardian">Guardian</option>
-              <option value="mother">Mother</option>
-              <option value="father">Father</option>
-              <option value="carer">Carer</option>
-            </select>
-          </label>
+          {parentProfileId ? <RelationshipFields /> : null}
         </div>
-        <CentreField centres={centres} />
         <StudentAcademicFields />
-        <p className="form-helper">If no parent is selected, provide the student email for independent access. If a parent is selected, the student can use people code + date of birth.</p>
+        <p className="form-helper">If no parent is selected, an email is required for the student. If a parent is selected, student email is optional and the family link includes the guardian relationship.</p>
         <DialogActions submitting={status.submitting} submitLabel="Create student" />
       </form>
     </FormDialog>
@@ -132,33 +198,49 @@ export function StudentOnboardingDialog({ open, onOpenChange, onCreated, parents
 export function ParentStudentOnboardingDialog({ open, onOpenChange, onCreated }: OnboardingDialogProps) {
   const { centres, error: centreError } = useCentres(open);
   const [status, setStatus] = useState<FormStatus>(initialStatus);
+  const [relationshipFormKey, setRelationshipFormKey] = useState(0);
+
+  function changeOpen(nextOpen: boolean) {
+    if (!nextOpen) setStatus(initialStatus);
+    onOpenChange(nextOpen);
+  }
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const form = event.currentTarget;
     setStatus({ error: "", success: "", submitting: true });
-    const data = new FormData(event.currentTarget);
+    const data = new FormData(form);
     const centreId = stringFromData(data, "centreId");
     const parent = scopedFormObject(data, "parent", centreId);
     const student = scopedFormObject(data, "student", centreId);
 
     try {
-      await postOnboarding("/api/profiles/onboarding/parent-student", {
+      const result = (await postOnboarding("/api/profiles/onboarding/parent-student", {
         parent,
-        student: { ...student, peopleCodeLoginEnabled: true },
+        student: { ...student, peopleCodeLoginEnabled: Boolean(student.email) },
         relationshipType: stringFromData(data, "relationshipType") || "guardian",
+        relationshipDescription: stringFromData(data, "relationshipDescription") || undefined,
+      })) as ParentStudentOnboardingResult;
+      setStatus({
+        error: "",
+        success: `${activationOutcome("Parent", result.parentAccount)} ${activationOutcome("Student", result.studentAccount)} Profiles linked successfully.`,
+        submitting: false,
       });
-      setStatus({ error: "", success: "Parent and student profiles created and linked.", submitting: false });
-      event.currentTarget.reset();
-      onCreated?.();
     } catch (error) {
       setStatus({ error: errorMessage(error), success: "", submitting: false });
+      return;
     }
+
+    form.reset();
+    setRelationshipFormKey((current) => current + 1);
+    onCreated?.();
+    changeOpen(false);
   }
 
   return (
     <FormDialog
       description="Create a parent, create a student, and link them immediately. This is the preferred no-email student onboarding path."
-      onOpenChange={onOpenChange}
+      onOpenChange={changeOpen}
       open={open}
       title="Onboard parent with student"
     >
@@ -167,7 +249,7 @@ export function ParentStudentOnboardingDialog({ open, onOpenChange, onCreated }:
         <CentreField centres={centres} />
         <fieldset className="form-section">
           <legend>Parent / guardian</legend>
-          <PersonFields namePrefix="parent" />
+          <PersonFields namePrefix="parent" phoneRequired />
           <AddressFields namePrefix="parent" />
           <ConsentFields namePrefix="parent" />
         </fieldset>
@@ -181,15 +263,7 @@ export function ParentStudentOnboardingDialog({ open, onOpenChange, onCreated }:
             <label>
               Gender <input name="student.gender" placeholder="Male, female, other…" />
             </label>
-            <label>
-              Relationship type
-              <select defaultValue="guardian" name="relationshipType">
-                <option value="guardian">Guardian</option>
-                <option value="mother">Mother</option>
-                <option value="father">Father</option>
-                <option value="carer">Carer</option>
-              </select>
-            </label>
+            <RelationshipFields key={relationshipFormKey} />
           </div>
           <StudentAcademicFields namePrefix="student" />
         </fieldset>
@@ -206,29 +280,38 @@ export function TutorOnboardingDialog({ open, onOpenChange, onCreated }: Onboard
   );
   const [status, setStatus] = useState<FormStatus>(initialStatus);
 
+  function changeOpen(nextOpen: boolean) {
+    if (!nextOpen) setStatus(initialStatus);
+    onOpenChange(nextOpen);
+  }
+
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const form = event.currentTarget;
     setStatus({ error: "", success: "", submitting: true });
     try {
       const result = (await postOnboarding(
         "/api/profiles/onboarding/tutors",
-        formObject(event.currentTarget),
+        formObject(form),
       )) as TutorOnboardingResult;
       const success = result.invitation.emailDelivery.status === "failed"
         ? "Tutor created, but the activation email could not be sent. Retry the invitation from tutor management."
         : "Tutor created and the activation email was accepted for delivery.";
       setStatus({ error: "", success, submitting: false });
-      event.currentTarget.reset();
-      onCreated?.();
     } catch (error) {
       setStatus({ error: errorMessage(error), success: "", submitting: false });
+      return;
     }
+
+    form.reset();
+    onCreated?.();
+    changeOpen(false);
   }
 
   return (
     <FormDialog
       description="Create a tutor staff identity, centre assignment, profile, and invitation."
-      onOpenChange={onOpenChange}
+      onOpenChange={changeOpen}
       open={open}
       title="Onboard tutor"
     >
@@ -242,7 +325,15 @@ export function TutorOnboardingDialog({ open, onOpenChange, onCreated }: Onboard
   );
 }
 
-function PersonFields({ emailRequired = true, namePrefix = "" }: { emailRequired?: boolean; namePrefix?: string }) {
+function PersonFields({
+  emailRequired = true,
+  namePrefix = "",
+  phoneRequired = false,
+}: {
+  emailRequired?: boolean;
+  namePrefix?: string;
+  phoneRequired?: boolean;
+}) {
   const name = fieldName(namePrefix);
   return (
     <div className="form-grid">
@@ -259,17 +350,50 @@ function PersonFields({ emailRequired = true, namePrefix = "" }: { emailRequired
         Email <input name={name("email")} required={emailRequired} type="email" />
       </label>
       <label>
-        Phone number <input name={name("phoneNumber")} type="tel" />
+        Phone number <input name={name("phoneNumber")} required={phoneRequired} type="tel" />
       </label>
     </div>
   );
 }
 
-function CentreField({ centres }: { centres: Centre[] }) {
+export function RelationshipFields() {
+  const [relationshipType, setRelationshipType] = useState("guardian");
+  const isOther = relationshipType === "other";
+
+  return (
+    <>
+      <label>
+        Relationship type
+        <select name="relationshipType" onChange={(event) => setRelationshipType(event.target.value)} value={relationshipType}>
+          <option value="guardian">Guardian</option>
+          <option value="mother">Mother</option>
+          <option value="father">Father</option>
+          <option value="carer">Carer</option>
+          <option value="step_parent">Step-parent</option>
+          <option value="other">Other</option>
+        </select>
+      </label>
+      {isOther ? (
+        <label>
+          Other relationship (1–3 words)
+          <input
+            maxLength={80}
+            name="relationshipDescription"
+            pattern={otherRelationshipPattern}
+            placeholder="E.g. elder brother"
+            required
+          />
+        </label>
+      ) : null}
+    </>
+  );
+}
+
+function CentreField({ centres, onChange }: { centres: Centre[]; onChange?: (centreId: string) => void }) {
   return (
     <label>
       Centre
-      <select name="centreId" required>
+      <select name="centreId" onChange={(event) => onChange?.(event.target.value)} required>
         <option value="">Select centre</option>
         {centres.map((centre) => (
           <option key={centre.id} value={centre.id}>
@@ -438,4 +562,21 @@ function fieldName(prefix: string) {
 
 function errorMessage(error: unknown) {
   return error instanceof Error ? error.message : "The request could not be completed.";
+}
+
+function activationOutcome(label: "Parent" | "Student", account?: ManagedAccount) {
+  if (!account) {
+    return `${label} profile created without a login account.`;
+  }
+  if (account.accountStatus === "active") {
+    return `${label} profile linked to the existing active account.`;
+  }
+  const status = account.invitation?.emailDelivery?.status;
+  if (status === "smtp_accepted") {
+    return `${label} created and the activation email was accepted for delivery.`;
+  }
+  if (status === "failed" || status === "unavailable") {
+    return `${label} created, but the activation email could not be sent.`;
+  }
+  return `${label} created with an activation invitation pending.`;
 }

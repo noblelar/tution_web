@@ -250,14 +250,14 @@ export function AcademicSetup() {
         description="Define the level and its position in the shared academic catalogue."
         onOpenChange={(open) => { if (!open && pendingAction === "") cancelLevelEdit(); }}
       >
-        <form className="account-form" onSubmit={submitLevel}>
+        <form className="account-form !mt-0 !gap-5 p-5 sm:p-6" onSubmit={submitLevel}>
           <label>Name<input maxLength={120} onChange={(event) => setLevelDraft({ ...levelDraft, name: event.target.value })} placeholder="e.g. GCSE" required value={levelDraft.name} /></label>
           <label>Description <span>Optional</span><textarea maxLength={2000} onChange={(event) => setLevelDraft({ ...levelDraft, description: event.target.value })} placeholder="How this level is used" value={levelDraft.description} /></label>
           <label>Display order<input max={10000} min={0} onChange={(event) => setLevelDraft({ ...levelDraft, displayOrder: event.target.value })} required type="number" value={levelDraft.displayOrder} /></label>
           {error ? <p className="form-error" role="alert">{error}</p> : null}
-          <div className="dialog-actions">
-            <button disabled={pendingAction !== ""} onClick={cancelLevelEdit} type="button">Cancel</button>
-            <button className="primary-button" disabled={pendingAction !== ""} type="submit">
+          <div className="dialog-actions -mx-5 -mb-5 mt-1 flex-col-reverse border-t border-slate-200 px-5 !py-4 sm:-mx-6 sm:-mb-6 sm:flex-row sm:px-6">
+            <button className="w-full rounded-lg px-4 py-3 font-semibold text-slate-700 transition-colors hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-500 sm:w-auto" disabled={pendingAction !== ""} onClick={cancelLevelEdit} type="button">Cancel</button>
+            <button className="primary-button w-full !px-5 !py-3 transition-colors hover:brightness-95 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-orange-600 sm:w-auto" disabled={pendingAction !== ""} type="submit">
               {pendingAction === "create-level" || pendingAction === "update-level" ? "Saving…" : editingLevelId ? "Save level" : "Add level"}
             </button>
           </div>
@@ -270,7 +270,7 @@ export function AcademicSetup() {
         description="Define the subject and its stable code in the shared academic catalogue."
         onOpenChange={(open) => { if (!open && pendingAction === "") cancelSubjectEdit(); }}
       >
-        <form className="account-form" onSubmit={submitSubject}>
+        <form className="account-form !mt-0 !gap-5 p-5 sm:p-6" onSubmit={submitSubject}>
           <div className={styles.twoFields}>
             <label>Name<input maxLength={120} onChange={(event) => setSubjectDraft({ ...subjectDraft, name: event.target.value })} placeholder="e.g. Mathematics" required value={subjectDraft.name} /></label>
             <label>Code<input maxLength={24} onChange={(event) => setSubjectDraft({ ...subjectDraft, code: event.target.value.toUpperCase() })} pattern="[A-Za-z0-9][A-Za-z0-9_-]{1,23}" placeholder="MATHS" required value={subjectDraft.code} /></label>
@@ -278,9 +278,9 @@ export function AcademicSetup() {
           <label>Description <span>Optional</span><textarea maxLength={2000} onChange={(event) => setSubjectDraft({ ...subjectDraft, description: event.target.value })} placeholder="What the subject covers" value={subjectDraft.description} /></label>
           <label>Display order<input max={10000} min={0} onChange={(event) => setSubjectDraft({ ...subjectDraft, displayOrder: event.target.value })} required type="number" value={subjectDraft.displayOrder} /></label>
           {error ? <p className="form-error" role="alert">{error}</p> : null}
-          <div className="dialog-actions">
-            <button disabled={pendingAction !== ""} onClick={cancelSubjectEdit} type="button">Cancel</button>
-            <button className="primary-button" disabled={pendingAction !== ""} type="submit">
+          <div className="dialog-actions -mx-5 -mb-5 mt-1 flex-col-reverse border-t border-slate-200 px-5 !py-4 sm:-mx-6 sm:-mb-6 sm:flex-row sm:px-6">
+            <button className="w-full rounded-lg px-4 py-3 font-semibold text-slate-700 transition-colors hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-500 sm:w-auto" disabled={pendingAction !== ""} onClick={cancelSubjectEdit} type="button">Cancel</button>
+            <button className="primary-button w-full !px-5 !py-3 transition-colors hover:brightness-95 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-orange-600 sm:w-auto" disabled={pendingAction !== ""} type="submit">
               {pendingAction === "create-subject" || pendingAction === "update-subject" ? "Saving…" : editingSubjectId ? "Save subject" : "Add subject"}
             </button>
           </div>

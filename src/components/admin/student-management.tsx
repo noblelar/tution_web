@@ -5,7 +5,7 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 
 import { Icon } from "@/components/dashboard";
 import { ParentStudentOnboardingDialog, StudentOnboardingDialog } from "@/components/admin/onboarding-forms";
-import type { ParentProfile, ParentProfileList, StudentProfile, StudentProfileList } from "@/lib/profile-types";
+import type { ParentProfile, ParentProfileList, ProfileAdminContext, StudentProfile, StudentProfileList } from "@/lib/profile-types";
 
 type StudentStatusFilter = "all" | "active" | "inactive";
 type StudentAccessFilter = "all" | "people-code" | "email" | "no-email";
@@ -13,6 +13,7 @@ type StudentAccessFilter = "all" | "people-code" | "email" | "no-email";
 export function StudentManagement() {
   const [students, setStudents] = useState<StudentProfile[]>([]);
   const [parents, setParents] = useState<ParentProfile[]>([]);
+  const [canOnboardProfiles, setCanOnboardProfiles] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [query, setQuery] = useState("");
@@ -28,21 +29,27 @@ export function StudentManagement() {
       setLoading(true);
       setError("");
       try {
-        const [studentsResponse, parentsResponse] = await Promise.all([
+        const [studentsResponse, parentsResponse, contextResponse] = await Promise.all([
           fetch("/api/profiles/students", { cache: "no-store" }),
           fetch("/api/profiles/parents", { cache: "no-store" }),
+          fetch("/api/profiles/admin/context", { cache: "no-store" }),
         ]);
         const studentsResult = (await studentsResponse.json()) as StudentProfileList & { error?: string };
         const parentsResult = (await parentsResponse.json()) as ParentProfileList & { error?: string };
+        const contextResult = (await contextResponse.json()) as ProfileAdminContext & { error?: string };
         if (!studentsResponse.ok) {
           throw new Error(studentsResult.error ?? "Student profiles could not be loaded.");
         }
         if (!parentsResponse.ok) {
           throw new Error(parentsResult.error ?? "Parent profiles could not be loaded.");
         }
+        if (!contextResponse.ok) {
+          throw new Error(contextResult.error ?? "Student onboarding availability could not be loaded.");
+        }
         if (active) {
           setStudents(studentsResult.students);
           setParents(parentsResult.parents);
+          setCanOnboardProfiles(contextResult.canOnboardProfiles);
         }
       } catch (loadError) {
         if (active) setError(loadError instanceof Error ? loadError.message : "Student profiles could not be loaded.");
@@ -66,6 +73,7 @@ export function StudentManagement() {
         student.peopleCode,
         student.schoolName,
         student.academicYearGroup,
+        student.accountEmail,
       ].filter(Boolean).join(" ").toLowerCase();
       const matchesQuery = normalizedQuery === "" || searchable.includes(normalizedQuery);
       const matchesStatus = status === "all" || student.profileStatus === status;
@@ -90,16 +98,18 @@ export function StudentManagement() {
           <h1 id="student-management-title">Students</h1>
           <p>Search, review, and manage student profiles, people-code visibility, access status, and lifecycle readiness.</p>
         </div>
-        <button className="student-primary-action" onClick={() => setStudentDialogOpen(true)} type="button">
-          <Icon name="plus" size={16} />
-          Onboard student
-        </button>
+        {canOnboardProfiles ? (
+          <button className="student-primary-action" onClick={() => setStudentDialogOpen(true)} type="button">
+            <Icon name="plus" size={16} />
+            Onboard student
+          </button>
+        ) : null}
       </header>
 
       <section className="student-summary-grid" aria-label="Student profile summary">
         <SummaryCard label="Total students" value={String(students.length)} helper="Managed student profiles loaded from the profile module." icon="users" />
         <SummaryCard label="Active profiles" value={String(activeCount)} helper="Students available for ordinary platform use." icon="check" />
-        <SummaryCard label="No email login" value={String(noEmailCount)} helper="Students relying on parent linkage and people-code access." icon="grid" />
+        <SummaryCard label="No email login" value={String(noEmailCount)} helper="Operational student records that cannot sign in." icon="grid" />
         <SummaryCard label="People-code login" value={String(peopleCodeCount)} helper="Students with people-code + date-of-birth access enabled." icon="activity" />
       </section>
 
@@ -155,6 +165,7 @@ export function StudentManagement() {
                     <th scope="col">School / year</th>
                     <th scope="col">Access</th>
                     <th scope="col">Status</th>
+                    <th scope="col">Activation</th>
                     <th scope="col">Action</th>
                   </tr>
                 </thead>
@@ -172,6 +183,10 @@ export function StudentManagement() {
                       </td>
                       <td><AccessPills student={student} /></td>
                       <td><StatusBadge status={student.profileStatus} /></td>
+                      <td>
+                        <strong>{student.emailLoginEnabled ? student.accountStatus?.replaceAll("_", " ") ?? "Pending" : "No login identity"}</strong>
+                        <span>{student.invitation?.emailDelivery?.status === "failed" ? "Email failed — attention needed" : student.invitation?.status === "pending" ? `Invite expires ${new Date(student.invitation.expiresAt).toLocaleDateString()}` : student.emailVerified ? "Email verified" : student.invitation?.status ?? "Operational record"}</span>
+                      </td>
                       <td><Link className="student-detail-link" href={`/app/admin/students/${student.id}`}>Open</Link></td>
                     </tr>
                   ))}
@@ -182,29 +197,35 @@ export function StudentManagement() {
         ) : null}
       </section>
 
-      <section className="student-onboarding-next" id="onboarding-next" aria-label="Student onboarding phase notice">
-        <Icon name="plus" size={18} />
-        <div>
-          <h2>Manager-led onboarding is active</h2>
-          <p>Use the student workflow for independent students or existing-parent students. Use the family workflow when a parent and child should be created together.</p>
-          <div className="onboarding-action-row">
-            <button className="student-primary-action" onClick={() => setStudentDialogOpen(true)} type="button">Onboard student</button>
-            <button className="student-secondary-action" onClick={() => setFamilyDialogOpen(true)} type="button">Onboard parent + student</button>
+      {canOnboardProfiles ? (
+        <section className="student-onboarding-next" id="onboarding-next" aria-label="Student onboarding actions">
+          <Icon name="plus" size={18} />
+          <div>
+            <h2>Student and family onboarding</h2>
+            <p>Use the student workflow for independent students or existing-parent students. Use the family workflow when a parent and child should be created together.</p>
+            <div className="onboarding-action-row">
+              <button className="student-primary-action" onClick={() => setStudentDialogOpen(true)} type="button">Onboard student</button>
+              <button className="student-secondary-action" onClick={() => setFamilyDialogOpen(true)} type="button">Onboard parent + student</button>
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      ) : null}
 
-      <StudentOnboardingDialog
-        onCreated={() => setReloadKey((current) => current + 1)}
-        onOpenChange={setStudentDialogOpen}
-        open={studentDialogOpen}
-        parents={parents}
-      />
-      <ParentStudentOnboardingDialog
-        onCreated={() => setReloadKey((current) => current + 1)}
-        onOpenChange={setFamilyDialogOpen}
-        open={familyDialogOpen}
-      />
+      {canOnboardProfiles ? (
+        <>
+          <StudentOnboardingDialog
+            onCreated={() => setReloadKey((current) => current + 1)}
+            onOpenChange={setStudentDialogOpen}
+            open={studentDialogOpen}
+            parents={parents}
+          />
+          <ParentStudentOnboardingDialog
+            onCreated={() => setReloadKey((current) => current + 1)}
+            onOpenChange={setFamilyDialogOpen}
+            open={familyDialogOpen}
+          />
+        </>
+      ) : null}
     </main>
   );
 }
@@ -242,6 +263,9 @@ function StudentProfileCard({ student }: { student: StudentProfile }) {
 }
 
 export function AccessPills({ student }: { student: StudentProfile }) {
+  if (!student.emailLoginEnabled) {
+    return <span className="inline-flex rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700">Operational record · no login</span>;
+  }
   return (
     <div className="student-access-pills">
       <span className={student.emailLoginEnabled ? "is-enabled" : "is-muted"}>Email {student.emailLoginEnabled ? "on" : "off"}</span>

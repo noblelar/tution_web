@@ -22,7 +22,7 @@ const noAlternativeMethods: AlternativeMethods = {
   emailOtp: false,
 };
 
-export function LoginForm({ oauthError = "" }: { oauthError?: string }) {
+export function LoginForm({ oauthError = "", returnTo = "" }: { oauthError?: string; returnTo?: string }) {
   const router = useRouter();
   const [error, setError] = useState(oauthError);
   const [pending, setPending] = useState(false);
@@ -143,7 +143,7 @@ export function LoginForm({ oauthError = "" }: { oauthError?: string }) {
   }
 
   function completeSignIn(user?: LoginResult["user"]) {
-    router.push(roleHome(user));
+    router.push(returnTo || roleHome(user));
     router.refresh();
   }
 

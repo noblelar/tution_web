@@ -1,11 +1,10 @@
-import { AdminPagePlaceholder } from "@/components/admin/admin-page-placeholder";
+import { CreditManagement } from "@/components/credits";
 
 export default function AdminCreditsPage() {
   return (
-    <AdminPagePlaceholder
-      eyebrow="Admin area"
-      title="Credits"
-      description="Student and family credit management workflows will live here."
-    />
+    <main className="management-shell">
+      <header className="management-header"><div><p className="eyebrow">Tution administration</p><h1>Credits</h1><p className="mt-3 max-w-3xl text-slate-500">Award paid tuition hours and inspect the immutable household ledger.</p></div></header>
+      <CreditManagement />
+    </main>
   );
 }

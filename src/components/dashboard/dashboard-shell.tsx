@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Icon, type IconName } from "./icons";
+import { NotificationMenu } from "./notification-menu";
 
 export type DashboardNavItem = {
   label: string;
@@ -32,7 +33,9 @@ type CurrentUser = {
 const studentNavigation: DashboardNavItem[] = [
   { label: "Dashboard", href: "/app/student", icon: "grid" },
   { label: "Assignments", href: "/app/student/assignments", icon: "book" },
-  { label: "Schedule", href: "/app/student/schedule", icon: "calendar" },
+  { label: "Sessions", href: "/app/student/sessions", icon: "calendar" },
+  { label: "Bookings", href: "/app/student/bookings", icon: "check" },
+  { label: "Credits", href: "/app/student/credits", icon: "activity" },
   { label: "Recordings", href: "/app/student/recordings", icon: "headphones" },
   { label: "Notes", href: "/app/student/notes", icon: "file" },
   { label: "Resources", href: "/app/student/resources", icon: "file" },
@@ -214,10 +217,7 @@ export function DashboardShell({
             <kbd>⌘</kbd><kbd>F</kbd>
           </label>
           <div className="dashboard-account-actions" aria-label="Signed-in user">
-            <button className="dashboard-icon-button" type="button" aria-label="Notifications">
-              <span className="dashboard-notification-dot" />
-              <Icon name="activity" size={17} />
-            </button>
+            <NotificationMenu enabled={guardState === "allowed"} />
             <div className="dashboard-account-menu-wrap" ref={accountMenuRef}>
               <button
                 aria-expanded={accountMenuOpen}
@@ -294,6 +294,9 @@ function redirectForUnauthorizedRole(roles: Array<{ roleKey: string }>, currentH
   if (currentHome.startsWith("/app/student")) {
     return roleKeys.has("student") ? "" : expectedHome;
   }
+  if (currentHome === "/app") {
+    return roleKeys.has("tutor") && !roleKeys.has("owner") && !roleKeys.has("manager") ? "" : expectedHome;
+  }
   return "";
 }
 
@@ -301,5 +304,6 @@ function roleHome(roleKeys: Set<string>): string {
   if (roleKeys.has("owner") || roleKeys.has("manager")) return "/app/admin";
   if (roleKeys.has("parent")) return "/app/parent";
   if (roleKeys.has("student")) return "/app/student";
+  if (roleKeys.has("tutor")) return "/app";
   return "/login";
 }

@@ -4,7 +4,10 @@ import Link from "next/link";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 
 import { Icon } from "@/components/dashboard";
-import type { ParentProfile, ParentStudentLink, ParentStudentLinkList, StudentProfile, StudentProfileList } from "@/lib/profile-types";
+import { FormDialog } from "@/components/ui/form-dialog";
+import { RelationshipFields } from "./onboarding-forms";
+import { ProfileInvitationPanel } from "./profile-invitation-panel";
+import type { ParentProfile, ParentStudentLink, ParentStudentLinkList, ProfileAdminContext, StudentProfile, StudentProfileList } from "@/lib/profile-types";
 import { formatAddress } from "./parent-management";
 
 const defaultRelationshipType = "guardian";
@@ -16,6 +19,9 @@ export function ParentDetail({ parentProfileId }: { parentProfileId: string }) {
   const [loading, setLoading] = useState(true);
   const [pending, setPending] = useState("");
   const [error, setError] = useState("");
+  const [canOnboard, setCanOnboard] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
+  const [linkDialogOpen, setLinkDialogOpen] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -23,21 +29,25 @@ export function ParentDetail({ parentProfileId }: { parentProfileId: string }) {
       setLoading(true);
       setError("");
       try {
-        const [parentResponse, linksResponse, studentsResponse] = await Promise.all([
+        const [parentResponse, linksResponse, studentsResponse, contextResponse] = await Promise.all([
           fetch(`/api/profiles/parents/${parentProfileId}`, { cache: "no-store" }),
           fetch(`/api/profiles/parent-student-links?parentProfileId=${encodeURIComponent(parentProfileId)}`, { cache: "no-store" }),
           fetch("/api/profiles/students", { cache: "no-store" }),
+          fetch("/api/profiles/admin/context", { cache: "no-store" }),
         ]);
         const parentResult = (await parentResponse.json()) as ParentProfile & { error?: string };
         const linksResult = (await linksResponse.json()) as ParentStudentLinkList & { error?: string };
         const studentsResult = (await studentsResponse.json()) as StudentProfileList & { error?: string };
+        const contextResult = (await contextResponse.json()) as ProfileAdminContext & { error?: string };
         if (!parentResponse.ok) throw new Error(parentResult.error ?? "Parent profile could not be loaded.");
         if (!linksResponse.ok) throw new Error(linksResult.error ?? "Family relationships could not be loaded.");
         if (!studentsResponse.ok) throw new Error(studentsResult.error ?? "Students could not be loaded.");
+        if (!contextResponse.ok) throw new Error(contextResult.error ?? "Onboarding capabilities could not be loaded.");
         if (active) {
           setParent(parentResult);
           setLinks(linksResult.links);
           setStudents(studentsResult.students);
+          setCanOnboard(contextResult.canOnboardProfiles);
         }
       } catch (loadError) {
         if (active) setError(loadError instanceof Error ? loadError.message : "Parent profile could not be loaded.");
@@ -49,7 +59,7 @@ export function ParentDetail({ parentProfileId }: { parentProfileId: string }) {
     return () => {
       active = false;
     };
-  }, [parentProfileId]);
+  }, [parentProfileId, reloadKey]);
 
   const studentMap = useMemo(() => new Map(students.map((student) => [student.id, student])), [students]);
   const linkedStudentIDs = new Set(links.map((link) => link.studentProfileId));
@@ -57,19 +67,24 @@ export function ParentDetail({ parentProfileId }: { parentProfileId: string }) {
 
   async function createLink(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const form = new FormData(event.currentTarget);
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
     const studentProfileId = String(form.get("studentProfileId") ?? "");
     if (!studentProfileId) return;
-    await mutateRelationship("create", "/api/profiles/parent-student-links", "POST", {
+    const created = await mutateRelationship("create", "/api/profiles/parent-student-links", "POST", {
       parentProfileId,
       studentProfileId,
       relationshipType: String(form.get("relationshipType") ?? defaultRelationshipType),
-      canViewBookings: form.get("canViewBookings") === "on",
-      canBookLessons: form.get("canBookLessons") === "on",
-      canReceiveReports: form.get("canReceiveReports") === "on",
-      canManageCredits: form.get("canManageCredits") === "on",
+      relationshipDescription: String(form.get("relationshipDescription") ?? "").trim() || undefined,
+      canViewBookings: true,
+      canBookLessons: true,
+      canReceiveReports: true,
+      canManageCredits: true,
     });
-    event.currentTarget.reset();
+    if (!created) return;
+    formElement.reset();
+    setLinkDialogOpen(false);
+    setReloadKey((value) => value + 1);
   }
 
   async function updateLink(link: ParentStudentLink, patch: Partial<ParentStudentLink>) {
@@ -110,8 +125,10 @@ export function ParentDetail({ parentProfileId }: { parentProfileId: string }) {
         const exists = current.some((link) => link.id === result.id);
         return exists ? current.map((link) => (link.id === result.id ? result : link)) : [result, ...current];
       });
+      return true;
     } catch (mutationError) {
       setError(mutationError instanceof Error ? mutationError.message : "Family relationship update failed.");
+      return false;
     } finally {
       setPending("");
     }
@@ -149,6 +166,17 @@ export function ParentDetail({ parentProfileId }: { parentProfileId: string }) {
 
       {error ? <p className="form-error" role="alert">{error}</p> : null}
 
+      <ProfileInvitationPanel
+        accountEmail={parent.accountEmail}
+        accountStatus={parent.accountStatus}
+        canManage={canOnboard}
+        emailVerified={parent.emailVerified}
+        invitation={parent.invitation}
+        kind="parent"
+        onReissued={() => setReloadKey((value) => value + 1)}
+        profileId={parent.id}
+      />
+
       <section className="student-detail-grid">
         <article className="student-detail-card">
           <h2>Parent summary</h2>
@@ -161,20 +189,9 @@ export function ParentDetail({ parentProfileId }: { parentProfileId: string }) {
         </article>
 
         <article className="student-detail-card">
-          <h2>Create family link</h2>
-          <p>Link this parent or guardian to an active student and set their initial permissions.</p>
-          <form className="relationship-form" onSubmit={createLink}>
-            <label>Student<select name="studentProfileId" required defaultValue=""><option value="" disabled>Select student</option>{availableStudents.map((student) => <option key={student.id} value={student.id}>{student.firstName} {student.lastName} · {student.peopleCode}</option>)}</select></label>
-            <label>Relationship<select name="relationshipType" defaultValue={defaultRelationshipType}><option value="mother">Mother</option><option value="father">Father</option><option value="guardian">Guardian</option><option value="carer">Carer</option><option value="step_parent">Step parent</option><option value="other">Other</option></select></label>
-            <fieldset>
-              <legend>Permissions</legend>
-              <label><input defaultChecked name="canViewBookings" type="checkbox" /> View bookings</label>
-              <label><input defaultChecked name="canBookLessons" type="checkbox" /> Book lessons</label>
-              <label><input defaultChecked name="canReceiveReports" type="checkbox" /> Receive reports</label>
-              <label><input defaultChecked name="canManageCredits" type="checkbox" /> Manage credits</label>
-            </fieldset>
-            <button disabled={pending !== "" || availableStudents.length === 0} type="submit"><Icon name="plus" size={16} /> Create link</button>
-          </form>
+          <h2>Link another student</h2>
+          <p>Connect this guardian to an existing student. Standard guardian permissions are applied automatically.</p>
+          {canOnboard ? <button className="mt-4 rounded-lg bg-orange-600 px-4 py-2 font-semibold text-white disabled:opacity-50" disabled={availableStudents.length === 0} onClick={() => setLinkDialogOpen(true)} type="button"><Icon name="plus" size={16} /> Link student</button> : null}
         </article>
 
         <article className="student-detail-card is-wide">
@@ -204,6 +221,19 @@ export function ParentDetail({ parentProfileId }: { parentProfileId: string }) {
           </div>
         </article>
       </section>
+      <FormDialog description="Connect this guardian to an existing student." onOpenChange={setLinkDialogOpen} open={linkDialogOpen} title="Link student">
+        <form className="space-y-4 p-5" onSubmit={createLink}>
+          <label className="block font-medium">Student
+            <select className="mt-1 w-full rounded-lg border border-slate-300 p-2" name="studentProfileId" required defaultValue="">
+              <option value="" disabled>Select student</option>
+              {availableStudents.map((student) => <option key={student.id} value={student.id}>{student.firstName} {student.lastName} · {student.peopleCode}</option>)}
+            </select>
+          </label>
+          <RelationshipFields />
+          {error ? <p className="text-sm text-red-700" role="alert">{error}</p> : null}
+          <button className="rounded-lg bg-orange-600 px-4 py-2 font-semibold text-white disabled:opacity-50" disabled={pending !== ""} type="submit">{pending ? "Linking…" : "Link student"}</button>
+        </form>
+      </FormDialog>
     </main>
   );
 }

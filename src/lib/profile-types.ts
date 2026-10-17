@@ -5,10 +5,15 @@ export type ParentStudentLink = {
   parentProfileId: string;
   studentProfileId: string;
   relationshipType: string;
+  relationshipDescription?: string;
   canViewBookings: boolean;
   canBookLessons: boolean;
   canReceiveReports: boolean;
   canManageCredits: boolean;
+  canReceiveCommunications: boolean;
+  canCollectStudent: boolean;
+  canAccessBilling: boolean;
+  canAccessAcademics: boolean;
   linkStatus: string;
 };
 
@@ -20,6 +25,10 @@ export type ParentProfile = {
   id: string;
   organizationId: string;
   userId: string;
+  accountEmail?: string;
+  accountStatus?: string;
+  emailVerified: boolean;
+  invitation?: TutorInvitationStatus;
   primaryCentreId?: string;
   peopleCode: string;
   preferredName?: string;
@@ -37,6 +46,11 @@ export type ParentProfile = {
 
 export type ParentProfileList = {
   parents: ParentProfile[];
+};
+
+export type ParentOnboardingResult = {
+  account: ManagedAccount;
+  parent: ParentProfile;
 };
 
 export type TutorProfile = {
@@ -110,6 +124,10 @@ export type StudentProfile = {
   id: string;
   organizationId: string;
   userId?: string;
+  accountEmail?: string;
+  accountStatus?: string;
+  emailVerified: boolean;
+  invitation?: TutorInvitationStatus;
   primaryCentreId?: string;
   peopleCode: string;
   firstName: string;
@@ -130,7 +148,22 @@ export type StudentProfileList = {
   students: StudentProfile[];
 };
 
+export type StudentOnboardingResult = {
+  account?: ManagedAccount;
+  student: StudentProfile;
+  parentLink?: ParentStudentLink;
+};
+
+export type ParentStudentOnboardingResult = {
+  parentAccount: ManagedAccount;
+  studentAccount?: ManagedAccount;
+  parent: ParentProfile;
+  student: StudentProfile;
+  parentLink: ParentStudentLink;
+};
+
 export type ProfileAdminContext = {
+  canOnboardProfiles: boolean;
   peopleCode: {
     prefix: string;
     format: string;

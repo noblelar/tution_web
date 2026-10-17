@@ -3,19 +3,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { callProtectedBackend, verifyMutationRequest } from "@/lib/server-auth";
 import { protectedJsonResponse } from "@/lib/server-bff";
 import {
-  BackendParentProfile,
-  BackendParentStudentLink,
-  BackendStudentProfile,
-  mapParentProfile,
-  mapParentStudentLink,
-  mapStudentProfile,
+  BackendParentStudentOnboardingResult,
+  mapParentStudentOnboardingResult,
 } from "@/lib/server-profiles";
-
-type ParentWithStudentResult = {
-  parent: BackendParentProfile;
-  student: BackendStudentProfile;
-  parent_link: BackendParentStudentLink;
-};
 
 export async function POST(request: NextRequest) {
   if (!verifyMutationRequest(request)) {
@@ -32,6 +22,7 @@ export async function POST(request: NextRequest) {
   const parent = objectValue(body.parent);
   const student = objectValue(body.student);
   const relationshipType = typeof body.relationshipType === "string" && body.relationshipType.trim() ? body.relationshipType.trim() : "guardian";
+  const relationshipDescription = optionalString(body.relationshipDescription);
 
   const call = await callProtectedBackend(request, "/v1/profiles/onboarding/parent-student", {
     method: "POST",
@@ -39,17 +30,11 @@ export async function POST(request: NextRequest) {
       parent: parentOnboardingBody(parent),
       student: studentOnboardingBody(student),
       relationship_type: relationshipType,
+      relationship_description: relationshipDescription,
     }),
   });
 
-  return protectedJsonResponse(call, (result) => {
-    const value = result as ParentWithStudentResult;
-    return {
-      parent: mapParentProfile(value.parent),
-      student: mapStudentProfile(value.student),
-      parentLink: mapParentStudentLink(value.parent_link),
-    };
-  });
+  return protectedJsonResponse(call, (result) => mapParentStudentOnboardingResult(result as BackendParentStudentOnboardingResult));
 }
 
 function parentOnboardingBody(input: Record<string, unknown>) {
@@ -59,6 +44,7 @@ function parentOnboardingBody(input: Record<string, unknown>) {
     email: stringValue(input.email),
     phone_number: optionalString(input.phoneNumber),
     centre_id: stringValue(input.centreId),
+    relationship_description: optionalString(input.relationshipDescription),
     preferred_name: optionalString(input.preferredName),
     address_line1: optionalString(input.addressLine1),
     address_line2: optionalString(input.addressLine2),

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { PendingStaffDeleteDialog } from "@/components/admin/pending-staff-delete-dialog";
@@ -33,6 +34,7 @@ async function csrfToken(): Promise<string> {
 }
 
 export function AccountManagement() {
+  const router = useRouter();
   const [context, setContext] = useState<AccountManagementContext | null>(null);
   const [scope, setScope] = useState("");
   const [provisionCentre, setProvisionCentre] = useState("");
@@ -220,7 +222,8 @@ export function AccountManagement() {
           headers: { "content-type": "application/json", "x-csrf-token": csrf },
           body: JSON.stringify({}),
         }).catch(() => undefined);
-        window.location.assign("/login");
+        router.replace("/login");
+        router.refresh();
         return;
       }
       setRoleTarget(null);
@@ -583,7 +586,7 @@ export function AccountManagement() {
                   )}
                   <button
                     className={primaryButtonClasses}
-                    disabled={!selectedRoleEligibility.allowed || (Boolean(roleToAdd) && roleRequiresCentre(roleToAdd) && !roleCentre) || pendingAction.startsWith("role:")}
+                    disabled={!selectedRoleEligibility.allowed || (roleToAdd !== "" && roleRequiresCentre(roleToAdd) && !roleCentre) || pendingAction.startsWith("role:")}
                     type="submit"
                   >
                     {pendingAction.startsWith(`role:${roleTarget.id}:assign:`) ? "Adding role…" : "Add role"}
@@ -666,11 +669,13 @@ function roleRemovalEligibility(account: ManagedAccount, role: RoleGrant, contex
   if (role.roleKey === "owner" && account.id === context.actorUserId) {
     return { allowed: false, reason: "You cannot remove your own Owner role." };
   }
-  if (role.roleKey === "owner" && activeOwnerCount === null) {
-    return { allowed: false, reason: "Switch to All centres to confirm another active Owner before removing this role." };
-  }
-  if (role.roleKey === "owner" && activeOwnerCount <= 1) {
-    return { allowed: false, reason: "The final active Owner role cannot be removed." };
+  if (role.roleKey === "owner") {
+    if (activeOwnerCount === null) {
+      return { allowed: false, reason: "Switch to All centres to confirm another active Owner before removing this role." };
+    }
+    if (activeOwnerCount <= 1) {
+      return { allowed: false, reason: "The final active Owner role cannot be removed." };
+    }
   }
   if (roleRequiresCentre(role.roleKey) && !role.centreId) {
     return { allowed: false, reason: "This legacy role has no centre scope and cannot be changed here." };

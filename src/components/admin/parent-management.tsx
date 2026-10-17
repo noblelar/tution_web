@@ -5,13 +5,14 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 
 import { Icon } from "@/components/dashboard";
 import { ParentOnboardingDialog, ParentStudentOnboardingDialog } from "@/components/admin/onboarding-forms";
-import type { ParentProfile, ParentProfileList, ParentStudentLinkList } from "@/lib/profile-types";
+import type { ParentProfile, ParentProfileList, ParentStudentLinkList, ProfileAdminContext } from "@/lib/profile-types";
 
 type ParentStatusFilter = "all" | "active" | "inactive";
 
 export function ParentManagement() {
   const [parents, setParents] = useState<ParentProfile[]>([]);
   const [links, setLinks] = useState<ParentStudentLinkList["links"]>([]);
+  const [canOnboardProfiles, setCanOnboardProfiles] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [query, setQuery] = useState("");
@@ -26,17 +27,21 @@ export function ParentManagement() {
       setLoading(true);
       setError("");
       try {
-        const [parentsResponse, linksResponse] = await Promise.all([
+        const [parentsResponse, linksResponse, contextResponse] = await Promise.all([
           fetch("/api/profiles/parents", { cache: "no-store" }),
           fetch("/api/profiles/parent-student-links", { cache: "no-store" }),
+          fetch("/api/profiles/admin/context", { cache: "no-store" }),
         ]);
         const parentsResult = (await parentsResponse.json()) as ParentProfileList & { error?: string };
         const linksResult = (await linksResponse.json()) as ParentStudentLinkList & { error?: string };
+        const contextResult = (await contextResponse.json()) as ProfileAdminContext & { error?: string };
         if (!parentsResponse.ok) throw new Error(parentsResult.error ?? "Parent profiles could not be loaded.");
         if (!linksResponse.ok) throw new Error(linksResult.error ?? "Family links could not be loaded.");
+        if (!contextResponse.ok) throw new Error(contextResult.error ?? "Parent onboarding availability could not be loaded.");
         if (active) {
           setParents(parentsResult.parents);
           setLinks(linksResult.links);
+          setCanOnboardProfiles(contextResult.canOnboardProfiles);
         }
       } catch (loadError) {
         if (active) setError(loadError instanceof Error ? loadError.message : "Parent profiles could not be loaded.");
@@ -66,6 +71,7 @@ export function ParentManagement() {
         parent.preferredName,
         parent.peopleCode,
         parent.phoneNumber,
+        parent.accountEmail,
         parent.city,
         parent.postalCode,
       ].filter(Boolean).join(" ").toLowerCase();
@@ -87,10 +93,12 @@ export function ParentManagement() {
           <h1 id="parent-management-title">Parents & guardians</h1>
           <p>Search, review, and manage parent profiles, linked students, relationship coverage, and permission readiness.</p>
         </div>
-        <button className="student-primary-action" onClick={() => setParentDialogOpen(true)} type="button">
-          <Icon name="plus" size={16} />
-          Onboard parent
-        </button>
+        {canOnboardProfiles ? (
+          <button className="student-primary-action" onClick={() => setParentDialogOpen(true)} type="button">
+            <Icon name="plus" size={16} />
+            Onboard parent
+          </button>
+        ) : null}
       </header>
 
       <section className="student-summary-grid" aria-label="Parent profile summary">
@@ -143,6 +151,7 @@ export function ParentManagement() {
                     <th scope="col">Contact</th>
                     <th scope="col">Linked students</th>
                     <th scope="col">Status</th>
+                    <th scope="col">Activation</th>
                     <th scope="col">Action</th>
                   </tr>
                 </thead>
@@ -160,6 +169,10 @@ export function ParentManagement() {
                       </td>
                       <td><strong>{linkCounts.get(parent.id) ?? 0}</strong></td>
                       <td><span className={`student-status-badge is-${parent.profileStatus}`}>{parent.profileStatus}</span></td>
+                      <td>
+                        <strong>{parent.accountStatus?.replaceAll("_", " ") ?? "Unknown"}</strong>
+                        <span>{parent.invitation?.emailDelivery?.status === "failed" ? "Email failed — attention needed" : parent.invitation?.status === "pending" ? `Invite expires ${new Date(parent.invitation.expiresAt).toLocaleDateString()}` : parent.emailVerified ? "Email verified" : parent.invitation?.status ?? "Email not verified"}</span>
+                      </td>
                       <td><Link className="student-detail-link" href={`/app/admin/parents/${parent.id}`}>Open</Link></td>
                     </tr>
                   ))}
@@ -170,28 +183,34 @@ export function ParentManagement() {
         ) : null}
       </section>
 
-      <section className="student-onboarding-next" id="onboarding-next" aria-label="Parent onboarding phase notice">
-        <Icon name="plus" size={18} />
-        <div>
-          <h2>Parent and family onboarding is active</h2>
-          <p>Create a parent profile on its own, or create a parent and student together when the child does not need an email login.</p>
-          <div className="onboarding-action-row">
-            <button className="student-primary-action" onClick={() => setParentDialogOpen(true)} type="button">Onboard parent</button>
-            <button className="student-secondary-action" onClick={() => setFamilyDialogOpen(true)} type="button">Onboard parent + student</button>
+      {canOnboardProfiles ? (
+        <section className="student-onboarding-next" id="onboarding-next" aria-label="Parent onboarding actions">
+          <Icon name="plus" size={18} />
+          <div>
+            <h2>Parent and family onboarding</h2>
+            <p>Create a parent profile on its own, or create a parent and student together when the child does not need an email login.</p>
+            <div className="onboarding-action-row">
+              <button className="student-primary-action" onClick={() => setParentDialogOpen(true)} type="button">Onboard parent</button>
+              <button className="student-secondary-action" onClick={() => setFamilyDialogOpen(true)} type="button">Onboard parent + student</button>
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      ) : null}
 
-      <ParentOnboardingDialog
-        onCreated={() => setReloadKey((current) => current + 1)}
-        onOpenChange={setParentDialogOpen}
-        open={parentDialogOpen}
-      />
-      <ParentStudentOnboardingDialog
-        onCreated={() => setReloadKey((current) => current + 1)}
-        onOpenChange={setFamilyDialogOpen}
-        open={familyDialogOpen}
-      />
+      {canOnboardProfiles ? (
+        <>
+          <ParentOnboardingDialog
+            onCreated={() => setReloadKey((current) => current + 1)}
+            onOpenChange={setParentDialogOpen}
+            open={parentDialogOpen}
+          />
+          <ParentStudentOnboardingDialog
+            onCreated={() => setReloadKey((current) => current + 1)}
+            onOpenChange={setFamilyDialogOpen}
+            open={familyDialogOpen}
+          />
+        </>
+      ) : null}
     </main>
   );
 }

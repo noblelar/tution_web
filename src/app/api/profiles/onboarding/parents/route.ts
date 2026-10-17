@@ -2,11 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { callProtectedBackend, verifyMutationRequest } from "@/lib/server-auth";
 import { protectedJsonResponse } from "@/lib/server-bff";
-import { BackendParentProfile, mapParentProfile } from "@/lib/server-profiles";
-
-type ParentOnboardingResult = {
-  parent: BackendParentProfile;
-};
+import { BackendParentOnboardingResult, mapParentOnboardingResult } from "@/lib/server-profiles";
 
 export async function POST(request: NextRequest) {
   if (!verifyMutationRequest(request)) {
@@ -25,9 +21,7 @@ export async function POST(request: NextRequest) {
     body: JSON.stringify(parentOnboardingBody(body)),
   });
 
-  return protectedJsonResponse(call, (result) => ({
-    parent: mapParentProfile((result as ParentOnboardingResult).parent),
-  }));
+  return protectedJsonResponse(call, (result) => mapParentOnboardingResult(result as BackendParentOnboardingResult));
 }
 
 export function parentOnboardingBody(input: Record<string, unknown>) {
