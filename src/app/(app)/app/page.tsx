@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { DashboardShell } from "@/components/dashboard/dashboard-shell";
+import { tutorNavigation } from "@/components/dashboard/tutor-navigation";
 import { TutorAccountSettings } from "@/components/tutor-account-settings";
 
 type CurrentUser = {
@@ -54,10 +55,7 @@ export default function AppGatewayPage() {
       <DashboardShell
         defaultDisplayName="Tutor"
         homeHref="/app"
-        navigation={[
-          { label: "Account settings", href: "/app", icon: "settings" },
-          { label: "Attendance", href: "/app/attendance", icon: "check" },
-        ]}
+        navigation={tutorNavigation}
         navigationLabel="Tutor navigation"
         searchPlaceholder="Search your Tution workspace"
       >

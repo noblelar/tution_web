@@ -1,10 +1,6 @@
 import { AttendanceManagement } from "@/components/attendance";
 import { DashboardShell } from "@/components/dashboard/dashboard-shell";
-
-const tutorNavigation = [
-  { label: "Account settings", href: "/app", icon: "settings" as const },
-  { label: "Attendance", href: "/app/attendance", icon: "check" as const },
-];
+import { tutorNavigation } from "@/components/dashboard/tutor-navigation";
 
 export default function TutorAttendancePage() {
   return (

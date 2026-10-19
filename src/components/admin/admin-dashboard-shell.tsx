@@ -16,6 +16,7 @@ const adminNavigation: DashboardNavItem[] = [
   { label: "Classes", href: "/app/admin/classes", icon: "palette" },
   { label: "Bookings", href: "/app/admin/bookings", icon: "check" },
   { label: "Attendance", href: "/app/admin/attendance", icon: "check" },
+  { label: "Feedback & Queries", href: "/app/admin/feedback", icon: "message" },
   { label: "Credits", href: "/app/admin/credits", icon: "activity" },
   { label: "Reports", href: "/app/admin/reports", icon: "file" },
   { label: "Users", href: "/app/admin/users", icon: "settings" },

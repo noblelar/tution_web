@@ -4,6 +4,7 @@
   --dashboard-ink: #282535;
   --dashboard-muted: #8b8992;
   --dashboard-border: #ececef;
+  --dashboard-topbar-height: 3.35rem;
   display: flex;
   min-height: 100vh;
   background: #fbfbfc;
@@ -104,7 +105,7 @@
 
 .dashboard-topbar {
   display: flex;
-  min-height: 3.35rem;
+  min-height: var(--dashboard-topbar-height);
   align-items: center;
   justify-content: space-between;
   gap: 1.25rem;

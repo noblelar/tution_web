@@ -19,3 +19,12 @@ export function balanceAfterConfirmedBooking(balanceCredits: number) {
   return balanceCredits - bookingCreditCost;
 }
 
+// Presentation only. The Go cancellation transaction makes the final decision.
+export function canCancelBooking(status: "confirmed" | "waitlisted" | "credits_required" | "cancelled", attendanceRecorded: boolean) {
+  return status !== "cancelled" && !attendanceRecorded;
+}
+
+export function canCancelSession(bookings: Array<{ sessionId: string; status: "confirmed" | "waitlisted" | "credits_required" | "cancelled"; lessonFocusLocked: boolean }>, sessionId: string) {
+  return !bookings.some((booking) => booking.sessionId === sessionId && booking.status !== "cancelled" && booking.lessonFocusLocked);
+}
+

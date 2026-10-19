@@ -3,6 +3,7 @@
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 
 import { FormDialog } from "@/components/ui/form-dialog";
+import { canCancelBooking, canCancelSession } from "@/lib/booking-rules";
 import type { BookingContext, BookingParticipant, SessionBooking, SessionCancellationResult } from "@/lib/booking-types";
 import type { CentreList, ManagedCentre } from "@/lib/centre-types";
 import type { SessionList, TeachingSession } from "@/lib/session-types";
@@ -143,7 +144,7 @@ export function BookingManagement() {
     setPending("cancel-booking"); setError("");
     try {
       await mutate(`/api/bookings/${encodeURIComponent(targetBooking.id)}?operation=cancel`, "POST", { centreId, reason });
-      setDialog(null); setNotice("The booking was cancelled and any consumed credits were refunded."); await loadCentre(centreId);
+      setDialog(null); setNotice("The booking was cancelled and its booking credits were returned, if applicable."); await loadCentre(centreId);
     } catch (caught) { setError(message(caught, "The booking could not be cancelled.")); }
     finally { setPending(""); }
   }
@@ -188,7 +189,7 @@ export function BookingManagement() {
               </div>
               <div className="flex flex-wrap gap-2">
                 <button className={secondaryButton} onClick={() => openCreate(item)} type="button">Book student</button>
-                <button className={dangerButton} onClick={() => { setTargetSession(item); setReason(""); setDialog("cancel-session"); setError(""); }} type="button">Cancel session</button>
+                {canCancelSession(context.bookings, item.id) ? <button className={dangerButton} onClick={() => { setTargetSession(item); setReason(""); setDialog("cancel-session"); setError(""); }} type="button">Cancel session</button> : <span className="self-center text-xs font-semibold text-slate-600">Cannot cancel: attendance recorded</span>}
               </div>
             </article>
           )) : <Empty text="No published future sessions with offered subjects are available in this centre." />}
@@ -207,7 +208,7 @@ export function BookingManagement() {
                 <div className="flex flex-wrap items-center gap-2">
                   <strong className="text-slate-900">{item.studentFirstName} {item.studentLastName} · {item.subjectCode} · {item.subjectName}</strong>
                   <Status value={item.status} />
-                  {item.lessonFocusLocked ? <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-black uppercase tracking-wide text-slate-600">Focus locked</span> : null}
+                  {item.lessonFocusLocked ? <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-black uppercase tracking-wide text-slate-600">Attendance recorded</span> : null}
                 </div>
                 <p className="mt-1 text-sm text-slate-500">{formatDate(item.startsAt, item.centreTimeZone)} · {item.parentName} · Balance {item.walletBalance}{item.queuePosition ? ` · Queue ${item.queuePosition}` : ""}</p>
                 {item.lessonFocus ? (
@@ -219,7 +220,7 @@ export function BookingManagement() {
               </div>
               <div className="flex flex-wrap gap-2">
                 {(item.status === "waitlisted" || item.status === "credits_required") && item.queuePosition === 1 ? <button className={primaryButton} disabled={Boolean(pending)} onClick={() => void confirmWaiting(item)} type="button">Confirm place</button> : null}
-                {item.status !== "cancelled" ? <button className={dangerButton} disabled={Boolean(pending)} onClick={() => { setTargetBooking(item); setReason(""); setDialog("cancel-booking"); setError(""); }} type="button">Cancel</button> : null}
+                {canCancelBooking(item.status, item.lessonFocusLocked) ? <button className={dangerButton} disabled={Boolean(pending)} onClick={() => { setTargetBooking(item); setReason(""); setDialog("cancel-booking"); setError(""); }} type="button">Cancel</button> : item.status !== "cancelled" ? <span className="self-center text-xs font-semibold text-slate-600">Cancellation unavailable after attendance</span> : null}
               </div>
             </article>
           )) : <Empty text="No bookings have been recorded in this centre." />}
@@ -262,8 +263,8 @@ export function BookingManagement() {
         </div>
       </form>
     </FormDialog>
-    <ReasonDialog dangerLabel="Cancel booking" description="Confirmed bookings are refunded immediately. Waiting records have no credit to return." error={error} onClose={closeDialog} onSubmit={cancelBooking} open={dialog === "cancel-booking"} pending={pending !== ""} reason={reason} setReason={setReason} title="Cancel student booking" />
-    <ReasonDialog dangerLabel="Cancel session and refund" description="Every active booking will be cancelled. Confirmed bookings receive an immediate two-credit refund." error={error} onClose={closeDialog} onSubmit={cancelSession} open={dialog === "cancel-session"} pending={pending !== ""} reason={reason} setReason={setReason} title="Cancel published session" />
+    <ReasonDialog dangerLabel="Cancel booking" description="Cancellation is only available before attendance is recorded. Confirmed bookings are refunded immediately; waiting records have no credit to return." error={error} onClose={closeDialog} onSubmit={cancelBooking} open={dialog === "cancel-booking"} pending={pending !== ""} reason={reason} setReason={setReason} title="Cancel student booking" />
+    <ReasonDialog dangerLabel="Cancel session and refund" description="This cancels every active booking only if none has attendance recorded. Confirmed bookings receive a two-credit refund." error={error} onClose={closeDialog} onSubmit={cancelSession} open={dialog === "cancel-session"} pending={pending !== ""} reason={reason} setReason={setReason} title="Cancel published session" />
   </div>;
 }
 

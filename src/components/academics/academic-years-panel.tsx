@@ -2,6 +2,7 @@
 
 import { FormEvent, useCallback, useEffect, useState } from "react";
 
+import { FormDialog } from "@/components/ui/form-dialog";
 import type { AcademicYear, AcademicYearList } from "@/lib/academic-types";
 import styles from "./academic-setup.module.css";
 
@@ -20,6 +21,7 @@ export function AcademicYearsPanel({ centreId }: { centreId: string }) {
   const [years, setYears] = useState<AcademicYear[]>([]);
   const [draft, setDraft] = useState<YearDraft>(emptyYear);
   const [editingYearId, setEditingYearId] = useState("");
+  const [dialogOpen, setDialogOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [pendingAction, setPendingAction] = useState("");
   const [error, setError] = useState("");
@@ -40,6 +42,7 @@ export function AcademicYearsPanel({ centreId }: { centreId: string }) {
       setNotice("");
       setEditingYearId("");
       setDraft(emptyYear);
+      setDialogOpen(false);
       try {
         await loadYears();
       } catch (caught) {
@@ -65,7 +68,7 @@ export function AcademicYearsPanel({ centreId }: { centreId: string }) {
         { centreId, ...draft },
       );
       setNotice(editingYearId ? "Academic year updated." : "Academic year created as planned.");
-      cancelEdit();
+      closeEditor();
       await loadYears();
     } catch (caught) {
       setError(errorMessage(caught, "The academic year could not be saved."));
@@ -86,7 +89,7 @@ export function AcademicYearsPanel({ centreId }: { centreId: string }) {
     try {
       await mutate(`/api/academics/years/${encodeURIComponent(year.id)}/${action}`, "POST", { centreId });
       setNotice(action === "activate" ? `${year.name} is now the current academic year.` : `${year.name} has been closed and retained in history.`);
-      if (editingYearId === year.id) cancelEdit();
+      if (editingYearId === year.id) closeEditor();
       await loadYears();
     } catch (caught) {
       setError(errorMessage(caught, "The academic year status could not be changed."));
@@ -111,16 +114,27 @@ export function AcademicYearsPanel({ centreId }: { centreId: string }) {
     setDraft({ name: year.name, startDate: year.startDate, endDate: year.endDate });
     setError("");
     setNotice("");
+    setDialogOpen(true);
   }
 
-  function cancelEdit() {
+  function openCreateDialog() {
     setEditingYearId("");
     setDraft(emptyYear);
+    setError("");
+    setNotice("");
+    setDialogOpen(true);
+  }
+
+  function closeEditor() {
+    setEditingYearId("");
+    setDraft(emptyYear);
+    setDialogOpen(false);
   }
 
   const currentYear = years.find((year) => year.status === "current");
 
   return (
+    <>
     <section className={`management-panel ${styles.cataloguePanel} ${styles.yearsPanel}`} aria-labelledby="academic-years-title">
       <header className={styles.panelHeader}>
         <div>
@@ -128,29 +142,11 @@ export function AcademicYearsPanel({ centreId }: { centreId: string }) {
           <h2 id="academic-years-title">Academic years</h2>
           <p>Use one high-level year for planning and reporting. This is not an operating calendar: Tution can continue teaching during school holidays.</p>
         </div>
+        <button className="primary-button" disabled={loading || pendingAction !== ""} onClick={openCreateDialog} type="button">Add planned year</button>
       </header>
 
-      {error ? <p className={`form-error ${styles.inlineMessage}`} role="alert">{error}</p> : null}
+      {error && !dialogOpen ? <p className={`form-error ${styles.inlineMessage}`} role="alert">{error}</p> : null}
       {notice ? <p className={`${styles.success} ${styles.inlineMessage}`} role="status">{notice}</p> : null}
-
-      <form className={`account-form ${styles.form} ${styles.yearForm}`} onSubmit={submitYear}>
-        <label>
-          Year name
-          <input maxLength={64} onChange={(event) => setDraft({ ...draft, name: event.target.value })} placeholder="e.g. 2026/27" required value={draft.name} />
-        </label>
-        <label>
-          Start date
-          <input onChange={(event) => setDraft({ ...draft, startDate: event.target.value })} required type="date" value={draft.startDate} />
-        </label>
-        <label>
-          End date
-          <input min={draft.startDate || undefined} onChange={(event) => setDraft({ ...draft, endDate: event.target.value })} required type="date" value={draft.endDate} />
-        </label>
-        <div className={styles.formActions}>
-          <button className="primary-button" disabled={pendingAction !== ""} type="submit">{editingYearId ? "Save academic year" : "Add planned year"}</button>
-          {editingYearId ? <button className={styles.secondaryButton} onClick={cancelEdit} type="button">Cancel</button> : null}
-        </div>
-      </form>
 
       <div className={`${styles.entries} ${styles.yearEntries}`}>
         {loading ? <p className="loading-state">Loading academic years…</p> : null}
@@ -176,6 +172,38 @@ export function AcademicYearsPanel({ centreId }: { centreId: string }) {
         )) : null}
       </div>
     </section>
+
+    <FormDialog
+      open={dialogOpen}
+      title={editingYearId ? "Edit academic year" : "Add planned academic year"}
+      description="Define the high-level year used for planning and reporting across Tution."
+      onOpenChange={(open) => { if (!open && pendingAction === "") closeEditor(); }}
+    >
+      <form className="account-form !mt-0 !gap-5 p-5 sm:p-6" onSubmit={submitYear}>
+        <label>
+          Year name
+          <input maxLength={64} onChange={(event) => setDraft({ ...draft, name: event.target.value })} placeholder="e.g. 2026/27" required value={draft.name} />
+        </label>
+        <div className={styles.twoFields}>
+          <label>
+            Start date
+            <input onChange={(event) => setDraft({ ...draft, startDate: event.target.value })} required type="date" value={draft.startDate} />
+          </label>
+          <label>
+            End date
+            <input min={draft.startDate || undefined} onChange={(event) => setDraft({ ...draft, endDate: event.target.value })} required type="date" value={draft.endDate} />
+          </label>
+        </div>
+        {error ? <p className="form-error" role="alert">{error}</p> : null}
+        <div className="dialog-actions -mx-5 -mb-5 mt-1 flex-col-reverse border-t border-slate-200 px-5 !py-4 sm:-mx-6 sm:-mb-6 sm:flex-row sm:px-6">
+          <button className="w-full rounded-lg px-4 py-3 font-semibold text-slate-700 transition-colors hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-500 sm:w-auto" disabled={pendingAction !== ""} onClick={closeEditor} type="button">Cancel</button>
+          <button className="primary-button w-full !px-5 !py-3 transition-colors hover:brightness-95 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-orange-600 sm:w-auto" disabled={pendingAction !== ""} type="submit">
+            {pendingAction === "create-year" || pendingAction === "update-year" ? "Saving…" : editingYearId ? "Save academic year" : "Add planned year"}
+          </button>
+        </div>
+      </form>
+    </FormDialog>
+    </>
   );
 }
 

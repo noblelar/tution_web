@@ -72,5 +72,6 @@ function roleHome(roleKeys: Set<string>): string {
   if (roleKeys.has("owner") || roleKeys.has("manager")) return "/app/admin";
   if (roleKeys.has("parent")) return "/app/parent";
   if (roleKeys.has("student")) return "/app/student";
+  if (roleKeys.has("tutor")) return "/app";
   return "/login";
 }

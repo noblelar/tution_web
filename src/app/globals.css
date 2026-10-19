@@ -650,7 +650,7 @@ button:disabled {
 
 .audit-policy {
   position: sticky;
-  top: 1.5rem;
+  top: calc(var(--dashboard-topbar-height, 0rem) + 1.5rem);
 }
 
 .audit-policy h2 {

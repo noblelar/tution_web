@@ -28,7 +28,7 @@ export function CentreSetupGate({ children }: { children: ReactNode }) {
         const userResult = (await userResponse.json()) as { user?: CurrentUser };
         const centreResult = (await centreResponse.json()) as { centres?: unknown[] };
         const isOwner = userResult.user?.roles?.some((role) => (role.roleKey ?? role.role_key ?? "").toLowerCase() === "owner") ?? false;
-        if (active && isOwner && (centreResult.centres?.length ?? 0) === 0) {
+        if (active && isOwner && (centreResult.centres?.length ?? 0) === 0 && pathname !== "/app/admin") {
           router.replace("/app/admin/centres");
           return;
         }

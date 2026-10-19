@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import type { InAppNotification, NotificationList } from "@/lib/notification-types";
-import { Icon } from "./icons";
+import { Icon, type IconName } from "./icons";
 
 const emptyNotifications: NotificationList = {
   notifications: [],
@@ -129,9 +129,20 @@ function EnabledNotificationMenu() {
   }
 
   async function openNotification(notification: InAppNotification) {
+    let destination = notificationDestination(notification.actionHref);
+    if (!destination) {
+      setError("This notification does not have an available destination.");
+      return;
+    }
+    if (notification.type.startsWith("feedback_query_") || notification.type.startsWith("session_feedback_")) {
+      const feedbackDestination = new URL(destination, window.location.origin);
+      if (notification.centreId) feedbackDestination.searchParams.set("centreId", notification.centreId);
+      feedbackDestination.searchParams.set("tab", notification.type.startsWith("feedback_query_") ? "queries" : "feedback");
+      destination = `${feedbackDestination.pathname}${feedbackDestination.search}${feedbackDestination.hash}`;
+    }
     if (!notification.readAt) await mutateNotification(notification, "read");
     setOpen(false);
-    router.push(notification.actionHref);
+    router.push(destination);
   }
 
   return (
@@ -167,7 +178,7 @@ function EnabledNotificationMenu() {
           <header className="flex items-start justify-between gap-4 border-b border-slate-100 px-5 py-4">
             <div>
               <p className="text-sm font-extrabold text-slate-900">Notifications</p>
-              <p className="mt-1 text-xs leading-5 text-slate-500">Booking reminders and required actions remain here until resolved, dismissed, or expired.</p>
+              <p className="mt-1 text-xs leading-5 text-slate-500">Booking reminders, feedback, and query updates remain here until resolved, dismissed, or expired.</p>
             </div>
             <button
               aria-label="Close notifications"
@@ -189,7 +200,7 @@ function EnabledNotificationMenu() {
                   <Icon name="bell" size={18} />
                 </span>
                 <p className="mt-3 text-sm font-bold text-slate-700">You are all caught up</p>
-                <p className="mt-1 text-xs leading-5 text-slate-500">New booking reminders and required actions will appear here.</p>
+                <p className="mt-1 text-xs leading-5 text-slate-500">New reminders, feedback, and query updates will appear here.</p>
               </div>
             ) : null}
             <div className="space-y-2">
@@ -200,7 +211,7 @@ function EnabledNotificationMenu() {
                 >
                   <div className="flex items-start gap-3">
                     <span className="mt-0.5 grid size-8 shrink-0 place-items-center rounded-full bg-orange-100 text-[#f45b23]">
-                      <Icon name={notification.type === "booking_credits_required" ? "activity" : "calendar"} size={15} />
+                      <Icon name={notificationPresentation(notification.type).icon} size={15} />
                     </span>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-start justify-between gap-2">
@@ -216,7 +227,7 @@ function EnabledNotificationMenu() {
                           onClick={() => void openNotification(notification)}
                           type="button"
                         >
-                          {notification.type === "booking_credits_required" ? "Review booking" : "Open bookings"}
+                          {notificationPresentation(notification.type).action}
                         </button>
                         <button
                           className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-600 transition hover:border-slate-300 hover:bg-slate-50 disabled:cursor-wait disabled:opacity-60"
@@ -238,6 +249,45 @@ function EnabledNotificationMenu() {
       ) : null}
     </div>
   );
+}
+
+function notificationPresentation(type: InAppNotification["type"]): { icon: IconName; action: string } {
+  switch (type) {
+    case "booking_credits_required":
+      return { icon: "activity", action: "Review booking" };
+    case "weekly_booking_reminder":
+      return { icon: "calendar", action: "Open bookings" };
+    case "session_feedback_published":
+      return { icon: "book", action: "Read feedback" };
+    case "session_feedback_withdrawn":
+      return { icon: "file", action: "View withdrawal notice" };
+    case "feedback_query_created":
+      return { icon: "message", action: "Review query" };
+    case "feedback_query_assigned":
+      return { icon: "message", action: "Open assigned query" };
+    case "feedback_query_reply":
+      return { icon: "message", action: "Read reply" };
+    case "feedback_query_resolution_proposed":
+      return { icon: "check", action: "Review resolution" };
+    case "feedback_query_resolved":
+      return { icon: "check", action: "View resolved query" };
+    case "feedback_query_reopened":
+      return { icon: "message", action: "Open reopened query" };
+    default:
+      return { icon: "bell", action: "View update" };
+  }
+}
+
+function notificationDestination(value: string): string | null {
+  if (!value.startsWith("/app/") && value !== "/app") return null;
+  try {
+    const destination = new URL(value, window.location.origin);
+    if (destination.origin !== window.location.origin) return null;
+    if (destination.pathname !== "/app" && !destination.pathname.startsWith("/app/")) return null;
+    return `${destination.pathname}${destination.search}${destination.hash}`;
+  } catch {
+    return null;
+  }
 }
 
 function formatNotificationTime(value: string): string {

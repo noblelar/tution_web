@@ -36,6 +36,7 @@ const studentNavigation: DashboardNavItem[] = [
   { label: "Sessions", href: "/app/student/sessions", icon: "calendar" },
   { label: "Bookings", href: "/app/student/bookings", icon: "check" },
   { label: "Credits", href: "/app/student/credits", icon: "activity" },
+  { label: "Feedback & Queries", href: "/app/student/feedback", icon: "message" },
   { label: "Recordings", href: "/app/student/recordings", icon: "headphones" },
   { label: "Notes", href: "/app/student/notes", icon: "file" },
   { label: "Resources", href: "/app/student/resources", icon: "file" },
@@ -56,6 +57,7 @@ export function DashboardShell({
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const [displayName, setDisplayName] = useState(defaultDisplayName);
+  const [displayRole, setDisplayRole] = useState("Role unavailable");
   const [logoutError, setLogoutError] = useState("");
   const [loggingOut, setLoggingOut] = useState(false);
   const [loggingOutEverywhere, setLoggingOutEverywhere] = useState(false);
@@ -90,6 +92,7 @@ export function DashboardShell({
         const name = [firstName, lastName].filter(Boolean).join(" ") || email || defaultDisplayName;
         if (active) {
           setDisplayName(name);
+          setDisplayRole(highestRoleLabel(result.user?.roles ?? []));
           setGuardState("allowed");
         }
       } catch {
@@ -209,7 +212,7 @@ export function DashboardShell({
         </nav>
       </aside>
       <div className="dashboard-page-content">
-        <header className="dashboard-topbar">
+        <header className="dashboard-topbar sticky top-0 z-10">
           <label className="dashboard-search" htmlFor="dashboard-search-input">
             <Icon name="search" size={16} />
             <span className="visually-hidden">Search dashboard</span>
@@ -238,7 +241,7 @@ export function DashboardShell({
                 <div className="dashboard-account-menu" role="menu">
                   <div className="dashboard-account-menu-heading">
                     <strong>{displayName}</strong>
-                    <span>Signed in to Tution</span>
+                    <span>{guardState === "checking" ? "Checking role…" : guardState === "allowed" ? displayRole : "Role unavailable"}</span>
                   </div>
                   {logoutError ? <p className="dashboard-account-menu-error" role="alert">{logoutError}</p> : null}
                   <button disabled={loggingOut || loggingOutEverywhere} onClick={signOut} role="menuitem" type="button">
@@ -275,6 +278,18 @@ export function DashboardShell({
       </div>
     </div>
   );
+}
+
+function highestRoleLabel(roles: ReadonlyArray<{ roleKey: string }>): string {
+  const rolePriority = [
+    ["owner", "Owner"],
+    ["manager", "Manager"],
+    ["tutor", "Tutor"],
+    ["parent", "Parent"],
+    ["student", "Student"],
+  ] as const;
+  const roleKeys = new Set(roles.map((role) => role.roleKey));
+  return rolePriority.find(([key]) => roleKeys.has(key))?.[1] ?? "Role unavailable";
 }
 
 function isActive(pathname: string, href: string, homeHref: string): boolean {
