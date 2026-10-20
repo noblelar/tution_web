@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { DashboardShell, Icon } from "@/components/dashboard";
+import { Icon } from "@/components/dashboard";
 
 type Note = {
   id: number;
@@ -41,8 +41,7 @@ export function NotesView() {
   }, [sortNewest, tag]);
 
   return (
-    <DashboardShell>
-      <main className="notes-main" aria-labelledby="notes-title">
+    <main className="notes-main" aria-labelledby="notes-title">
         <header className="notes-header">
           <h1 id="notes-title">Notes</h1>
           <div className="notes-toolbar">
@@ -55,8 +54,7 @@ export function NotesView() {
           {visibleNotes.map((note) => <NoteCard key={note.id} note={note} />)}
         </section>
         {visibleNotes.length === 0 ? <p className="notes-empty-state">No notes match this filter.</p> : null}
-      </main>
-    </DashboardShell>
+    </main>
   );
 }
 

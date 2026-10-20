@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { callProtectedBackend, verifyMutationRequest } from "@/lib/server-auth";
 import { protectedJsonResponse } from "@/lib/server-bff";
-import { BackendStudentProfile, BackendTutorInvitation, mapStudentProfile, mapTutorInvitation } from "@/lib/server-profiles";
+import { BackendStudentProfile, BackendStudentSelfProfile, BackendTutorInvitation, mapStudentProfile, mapStudentSelfProfile, mapTutorInvitation } from "@/lib/server-profiles";
 
 type RouteContext = {
   params: Promise<{ studentProfileID: string }>;
@@ -15,7 +15,13 @@ export async function GET(request: NextRequest, context: RouteContext) {
     `/v1/profiles/students/${encodeURIComponent(studentProfileID)}`,
     { method: "GET" },
   );
-  return protectedJsonResponse(call, (body) => mapStudentProfile(body as BackendStudentProfile));
+  return protectedJsonResponse(
+    call,
+    (body) => studentProfileID === "me"
+      ? mapStudentSelfProfile(body as BackendStudentSelfProfile)
+      : mapStudentProfile(body as BackendStudentProfile),
+    studentProfileID === "me" ? "Your student profile could not be loaded." : "Student profile could not be loaded.",
+  );
 }
 
 export async function POST(request: NextRequest, context: RouteContext) {

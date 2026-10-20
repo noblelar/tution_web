@@ -1,11 +1,5 @@
-import { RoutePlaceholder } from "@/components/navigation/route-placeholder";
+import { ParentChildrenDirectory } from "@/components/parent-children-directory";
 
 export default function ParentChildrenPage() {
-  return (
-    <RoutePlaceholder
-      eyebrow="Parent area"
-      title="Children"
-      description="Parents and guardians will manage linked students from this page."
-    />
-  );
+  return <ParentChildrenDirectory />;
 }

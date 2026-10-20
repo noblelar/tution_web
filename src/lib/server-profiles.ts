@@ -7,9 +7,11 @@ import {
   ParentOnboardingResult,
   ParentProfile,
   ParentProfileList,
+  ParentSelfProfile,
   ProfileAdminContext,
   StudentProfile,
   StudentProfileList,
+  StudentSelfProfile,
   StudentOnboardingResult,
   TutorProfile,
   TutorProfileList,
@@ -65,6 +67,33 @@ export type BackendParentProfile = {
 
 export type BackendParentProfileList = {
   parents: BackendParentProfile[];
+};
+
+export type BackendParentSelfProfile = {
+  id: string;
+  first_name: string;
+  last_name: string;
+  preferred_name?: string;
+  email: string;
+  email_verified: boolean;
+  phone_number?: string;
+  people_code: string;
+  primary_centre?: {
+    id: string;
+    code: string;
+    name: string;
+  };
+  address_line1?: string;
+  address_line2?: string;
+  city?: string;
+  county_region?: string;
+  postal_code?: string;
+  country?: string;
+  marketing_opt_in: boolean;
+  contact_consent: boolean;
+  profile_status: string;
+  account_status: string;
+  profile_updated_at: string;
 };
 
 export type BackendParentOnboardingResult = {
@@ -174,6 +203,41 @@ export type BackendStudentProfileList = {
   students: BackendStudentProfile[];
 };
 
+export type BackendStudentSelfProfile = {
+  id: string;
+  first_name: string;
+  last_name: string;
+  preferred_name?: string;
+  date_of_birth: string;
+  gender?: string;
+  school_name?: string;
+  academic_year_group?: string;
+  email?: string;
+  email_verified: boolean;
+  people_code: string;
+  primary_centre?: {
+    id: string;
+    code: string;
+    name: string;
+  };
+  current_placement?: {
+    id: string;
+    status: string;
+    academic_year_id: string;
+    academic_year_name: string;
+    academic_year_status: string;
+    academic_level_id: string;
+    academic_level_name: string;
+    academic_level_status: string;
+  };
+  email_login_enabled: boolean;
+  people_code_login_enabled: boolean;
+  can_manage_own_bookings: boolean;
+  profile_status: string;
+  account_status: string;
+  profile_updated_at: string;
+};
+
 export type BackendStudentOnboardingResult = {
   account?: BackendManagedAccount;
   student: BackendStudentProfile;
@@ -263,6 +327,37 @@ export function mapParentProfile(parent: BackendParentProfile): ParentProfile {
 
 export function mapParentProfileList(list: BackendParentProfileList): ParentProfileList {
   return { parents: list.parents.map(mapParentProfile) };
+}
+
+export function mapParentSelfProfile(parent: BackendParentSelfProfile): ParentSelfProfile {
+  return {
+    id: parent.id,
+    firstName: parent.first_name,
+    lastName: parent.last_name,
+    preferredName: parent.preferred_name,
+    email: parent.email,
+    emailVerified: parent.email_verified,
+    phoneNumber: parent.phone_number,
+    peopleCode: parent.people_code,
+    primaryCentre: parent.primary_centre
+      ? {
+          id: parent.primary_centre.id,
+          code: parent.primary_centre.code,
+          name: parent.primary_centre.name,
+        }
+      : undefined,
+    addressLine1: parent.address_line1,
+    addressLine2: parent.address_line2,
+    city: parent.city,
+    countyRegion: parent.county_region,
+    postalCode: parent.postal_code,
+    country: parent.country,
+    marketingOptIn: parent.marketing_opt_in,
+    contactConsent: parent.contact_consent,
+    profileStatus: parent.profile_status,
+    accountStatus: parent.account_status,
+    profileUpdatedAt: parent.profile_updated_at,
+  };
 }
 
 export function mapParentOnboardingResult(result: BackendParentOnboardingResult): ParentOnboardingResult {
@@ -404,6 +499,47 @@ export function mapStudentProfile(student: BackendStudentProfile): StudentProfil
 
 export function mapStudentProfileList(list: BackendStudentProfileList): StudentProfileList {
   return { students: list.students.map(mapStudentProfile) };
+}
+
+export function mapStudentSelfProfile(student: BackendStudentSelfProfile): StudentSelfProfile {
+  return {
+    id: student.id,
+    firstName: student.first_name,
+    lastName: student.last_name,
+    preferredName: student.preferred_name,
+    dateOfBirth: student.date_of_birth,
+    gender: student.gender,
+    schoolName: student.school_name,
+    academicYearGroup: student.academic_year_group,
+    email: student.email,
+    emailVerified: student.email_verified,
+    peopleCode: student.people_code,
+    primaryCentre: student.primary_centre
+      ? {
+          id: student.primary_centre.id,
+          code: student.primary_centre.code,
+          name: student.primary_centre.name,
+        }
+      : undefined,
+    currentPlacement: student.current_placement
+      ? {
+          id: student.current_placement.id,
+          status: student.current_placement.status,
+          academicYearId: student.current_placement.academic_year_id,
+          academicYearName: student.current_placement.academic_year_name,
+          academicYearStatus: student.current_placement.academic_year_status,
+          academicLevelId: student.current_placement.academic_level_id,
+          academicLevelName: student.current_placement.academic_level_name,
+          academicLevelStatus: student.current_placement.academic_level_status,
+        }
+      : undefined,
+    emailLoginEnabled: student.email_login_enabled,
+    peopleCodeLoginEnabled: student.people_code_login_enabled,
+    canManageOwnBookings: student.can_manage_own_bookings,
+    profileStatus: student.profile_status,
+    accountStatus: student.account_status,
+    profileUpdatedAt: student.profile_updated_at,
+  };
 }
 
 export function mapStudentOnboardingResult(result: BackendStudentOnboardingResult): StudentOnboardingResult {

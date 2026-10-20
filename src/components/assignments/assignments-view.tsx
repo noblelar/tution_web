@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { DashboardShell, Icon } from "@/components/dashboard";
+import { Icon } from "@/components/dashboard";
 
 type AssignmentStatus = "Done" | "Progress" | "Pending";
 type Assignment = {
@@ -38,8 +38,7 @@ export function AssignmentsView() {
   }), [dateRange, query, status]);
 
   return (
-    <DashboardShell>
-      <main className="assignments-main" aria-labelledby="assignments-title">
+    <main className="assignments-main" aria-labelledby="assignments-title">
         <header className="assignments-header">
           <div>
             <h1 id="assignments-title">Assignments</h1>
@@ -66,8 +65,7 @@ export function AssignmentsView() {
             <nav className="assignments-pagination" aria-label="Assignments pages"><button type="button" aria-label="Previous page" disabled={page === 1} onClick={() => setPage(Math.max(1, page - 1))}><Icon name="chevronLeft" size={14} /></button>{pages.map((pageNumber, index) => typeof pageNumber === "number" ? <button className={page === pageNumber ? "is-current" : ""} key={pageNumber} type="button" onClick={() => setPage(pageNumber)}>{pageNumber}</button> : <span key={`ellipsis-${index}`}>{pageNumber}</span>)}<button type="button" aria-label="Next page" onClick={() => setPage(Math.min(10, page + 1))}><Icon name="chevronRight" size={14} /></button></nav>
           </footer>
         </section>
-      </main>
-    </DashboardShell>
+    </main>
   );
 }
 

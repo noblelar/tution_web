@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { DashboardShell, Icon } from "@/components/dashboard";
+import { Icon } from "@/components/dashboard";
 
 type Recording = {
   id: number;
@@ -30,8 +30,7 @@ export function RecordingsView() {
   }, [filter, sortNewest]);
 
   return (
-    <DashboardShell>
-      <main className="recordings-main" aria-labelledby="recordings-title">
+    <main className="recordings-main" aria-labelledby="recordings-title">
         <header className="recordings-header">
           <div><h1 id="recordings-title">Class Recordings</h1><p>Access and review past class sessions</p></div>
           <div className="recordings-toolbar">
@@ -49,8 +48,7 @@ export function RecordingsView() {
           <label className="recordings-row-count">Show <select aria-label="Rows per page" defaultValue="2"><option>2</option><option>5</option><option>10</option></select> Row</label>
           <div className="recordings-footer-actions"><button className="recordings-sort-button" type="button" onClick={() => setSortNewest((current) => !current)}><Icon name="sort" size={13} />{sortNewest ? "Oldest" : "Newest"}</button><nav className="recordings-pagination" aria-label="Recordings pages"><button type="button" aria-label="Previous page" disabled><Icon name="chevronLeft" size={14} /></button><button className="is-current" type="button">1</button><button type="button" aria-label="Next page"><Icon name="chevronRight" size={14} /></button></nav></div>
         </footer>
-      </main>
-    </DashboardShell>
+    </main>
   );
 }
 

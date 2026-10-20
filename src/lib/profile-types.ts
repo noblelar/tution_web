@@ -48,6 +48,35 @@ export type ParentProfileList = {
   parents: ParentProfile[];
 };
 
+export type ParentProfileCentre = {
+  id: string;
+  code: string;
+  name: string;
+};
+
+export type ParentSelfProfile = {
+  id: string;
+  firstName: string;
+  lastName: string;
+  preferredName?: string;
+  email: string;
+  emailVerified: boolean;
+  phoneNumber?: string;
+  peopleCode: string;
+  primaryCentre?: ParentProfileCentre;
+  addressLine1?: string;
+  addressLine2?: string;
+  city?: string;
+  countyRegion?: string;
+  postalCode?: string;
+  country?: string;
+  marketingOptIn: boolean;
+  contactConsent: boolean;
+  profileStatus: string;
+  accountStatus: string;
+  profileUpdatedAt: string;
+};
+
 export type ParentOnboardingResult = {
   account: ManagedAccount;
   parent: ParentProfile;
@@ -146,6 +175,45 @@ export type StudentProfile = {
 
 export type StudentProfileList = {
   students: StudentProfile[];
+};
+
+export type StudentProfileCentre = {
+  id: string;
+  code: string;
+  name: string;
+};
+
+export type StudentAcademicPlacement = {
+  id: string;
+  status: string;
+  academicYearId: string;
+  academicYearName: string;
+  academicYearStatus: string;
+  academicLevelId: string;
+  academicLevelName: string;
+  academicLevelStatus: string;
+};
+
+export type StudentSelfProfile = {
+  id: string;
+  firstName: string;
+  lastName: string;
+  preferredName?: string;
+  dateOfBirth: string;
+  gender?: string;
+  schoolName?: string;
+  academicYearGroup?: string;
+  email?: string;
+  emailVerified: boolean;
+  peopleCode: string;
+  primaryCentre?: StudentProfileCentre;
+  currentPlacement?: StudentAcademicPlacement;
+  emailLoginEnabled: boolean;
+  peopleCodeLoginEnabled: boolean;
+  canManageOwnBookings: boolean;
+  profileStatus: string;
+  accountStatus: string;
+  profileUpdatedAt: string;
 };
 
 export type StudentOnboardingResult = {

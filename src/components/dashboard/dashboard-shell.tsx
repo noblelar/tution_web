@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Icon, type IconName } from "./icons";
 import { NotificationMenu } from "./notification-menu";
+import { studentNavigation } from "./student-navigation";
 
 export type DashboardNavItem = {
   label: string;
@@ -19,6 +20,7 @@ type DashboardShellProps = {
   navigation?: DashboardNavItem[];
   navigationLabel?: string;
   searchPlaceholder?: string;
+  showSearch?: boolean;
 };
 
 type CurrentUser = {
@@ -30,20 +32,6 @@ type CurrentUser = {
   };
 };
 
-const studentNavigation: DashboardNavItem[] = [
-  { label: "Dashboard", href: "/app/student", icon: "grid" },
-  { label: "Assignments", href: "/app/student/assignments", icon: "book" },
-  { label: "Sessions", href: "/app/student/sessions", icon: "calendar" },
-  { label: "Bookings", href: "/app/student/bookings", icon: "check" },
-  { label: "Credits", href: "/app/student/credits", icon: "activity" },
-  { label: "Feedback & Queries", href: "/app/student/feedback", icon: "message" },
-  { label: "Recordings", href: "/app/student/recordings", icon: "headphones" },
-  { label: "Notes", href: "/app/student/notes", icon: "file" },
-  { label: "Resources", href: "/app/student/resources", icon: "file" },
-  { label: "Reports", href: "/app/student/reports", icon: "activity" },
-  { label: "Profile", href: "/app/student/profile", icon: "settings" },
-];
-
 export function DashboardShell({
   children,
   defaultDisplayName = "Student",
@@ -51,6 +39,7 @@ export function DashboardShell({
   navigation = studentNavigation,
   navigationLabel = "Student navigation",
   searchPlaceholder = "Search",
+  showSearch = true,
 }: DashboardShellProps) {
   const pathname = usePathname();
   const router = useRouter();
@@ -213,12 +202,14 @@ export function DashboardShell({
       </aside>
       <div className="dashboard-page-content">
         <header className="dashboard-topbar sticky top-0 z-10">
-          <label className="dashboard-search" htmlFor="dashboard-search-input">
-            <Icon name="search" size={16} />
-            <span className="visually-hidden">Search dashboard</span>
-            <input id="dashboard-search-input" placeholder={searchPlaceholder} type="search" />
-            <kbd>⌘</kbd><kbd>F</kbd>
-          </label>
+          {showSearch ? (
+            <label className="dashboard-search" htmlFor="dashboard-search-input">
+              <Icon name="search" size={16} />
+              <span className="visually-hidden">Search dashboard</span>
+              <input id="dashboard-search-input" placeholder={searchPlaceholder} type="search" />
+              <kbd>⌘</kbd><kbd>F</kbd>
+            </label>
+          ) : <span aria-hidden="true" />}
           <div className="dashboard-account-actions" aria-label="Signed-in user">
             <NotificationMenu enabled={guardState === "allowed"} />
             <div className="dashboard-account-menu-wrap" ref={accountMenuRef}>

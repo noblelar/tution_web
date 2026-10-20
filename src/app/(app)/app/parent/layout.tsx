@@ -13,7 +13,6 @@ const parentNavigation: DashboardNavItem[] = [
   { label: "Credits", href: "/app/parent/credits", icon: "activity" },
   { label: "Feedback & Queries", href: "/app/parent/feedback", icon: "message" },
   { label: "Reports", href: "/app/parent/reports", icon: "file" },
-  { label: "Messages", href: "/app/parent/messages", icon: "message" },
   { label: "Profile", href: "/app/parent/profile", icon: "settings" },
 ];
 

@@ -1,5 +1,5 @@
-import { LearningDashboard } from "@/components/dashboard";
+import { StudentDashboardOverview } from "@/components/student-dashboard-overview";
 
 export default function StudentDashboardPage() {
-  return <LearningDashboard />;
+  return <StudentDashboardOverview />;
 }
