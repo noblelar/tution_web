@@ -5,6 +5,7 @@ export type InAppNotification = {
   type:
     | "weekly_booking_reminder"
     | "booking_credits_required"
+    | "student_daily_reflection_prompt"
     | "session_feedback_published"
     | "session_feedback_withdrawn"
     | "feedback_query_created"

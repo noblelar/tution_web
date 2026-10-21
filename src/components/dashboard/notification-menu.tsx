@@ -4,6 +4,11 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import type { InAppNotification, NotificationList } from "@/lib/notification-types";
+import { dismissStudentReflectionPrompt } from "@/lib/student-notes-api";
+import {
+  dispatchStudentPromptRefresh,
+  notificationsRefreshEvent,
+} from "@/lib/student-notes-events";
 import { Icon, type IconName } from "./icons";
 
 const emptyNotifications: NotificationList = {
@@ -51,10 +56,12 @@ function EnabledNotificationMenu() {
       if (document.visibilityState === "visible") void loadNotifications(false);
     };
     window.addEventListener("focus", refreshOnFocus);
+    window.addEventListener(notificationsRefreshEvent, refreshOnFocus);
     document.addEventListener("visibilitychange", refreshWhenVisible);
     return () => {
       window.clearInterval(interval);
       window.removeEventListener("focus", refreshOnFocus);
+      window.removeEventListener(notificationsRefreshEvent, refreshOnFocus);
       document.removeEventListener("visibilitychange", refreshWhenVisible);
     };
   }, [loadNotifications]);
@@ -90,6 +97,16 @@ function EnabledNotificationMenu() {
   async function mutateNotification(notification: InAppNotification, operation: "read" | "dismiss") {
     setPendingID(notification.id);
     try {
+      if (operation === "dismiss" && notification.type === "student_daily_reflection_prompt") {
+        const promptID = reflectionPromptID(notification.actionHref);
+        if (!promptID) throw new Error("This learning reminder could not be identified. Refresh and try again.");
+        await dismissStudentReflectionPrompt(promptID);
+        removeNotification(notification);
+        dispatchStudentPromptRefresh();
+        setError("");
+        return true;
+      }
+
       const csrfResponse = await fetch("/api/auth/csrf", { cache: "no-store" });
       if (!csrfResponse.ok) throw new Error("Notification verification failed.");
       const { csrfToken } = (await csrfResponse.json()) as { csrfToken: string };
@@ -105,12 +122,7 @@ function EnabledNotificationMenu() {
       const updated = (await response.json()) as InAppNotification;
       setData((current) => {
         if (operation === "dismiss") {
-          const notifications = current.notifications.filter((item) => item.id !== notification.id);
-          return {
-            notifications,
-            activeCount: Math.max(0, current.activeCount - 1),
-            unreadCount: Math.max(0, current.unreadCount - (notification.readAt ? 0 : 1)),
-          };
+          return withoutNotification(current, notification);
         }
         return {
           ...current,
@@ -126,6 +138,10 @@ function EnabledNotificationMenu() {
     } finally {
       setPendingID("");
     }
+  }
+
+  function removeNotification(notification: InAppNotification) {
+    setData((current) => withoutNotification(current, notification));
   }
 
   async function openNotification(notification: InAppNotification) {
@@ -178,7 +194,7 @@ function EnabledNotificationMenu() {
           <header className="flex items-start justify-between gap-4 border-b border-slate-100 px-5 py-4">
             <div>
               <p className="text-sm font-extrabold text-slate-900">Notifications</p>
-              <p className="mt-1 text-xs leading-5 text-slate-500">Booking reminders, feedback, and query updates remain here until resolved, dismissed, or expired.</p>
+              <p className="mt-1 text-xs leading-5 text-slate-500">Learning reminders, bookings, feedback, and query updates remain here until resolved, dismissed, or expired.</p>
             </div>
             <button
               aria-label="Close notifications"
@@ -257,6 +273,8 @@ function notificationPresentation(type: InAppNotification["type"]): { icon: Icon
       return { icon: "activity", action: "Review booking" };
     case "weekly_booking_reminder":
       return { icon: "calendar", action: "Open bookings" };
+    case "student_daily_reflection_prompt":
+      return { icon: "book", action: "Record learning" };
     case "session_feedback_published":
       return { icon: "book", action: "Read feedback" };
     case "session_feedback_withdrawn":
@@ -288,6 +306,28 @@ function notificationDestination(value: string): string | null {
   } catch {
     return null;
   }
+}
+
+function reflectionPromptID(value: string): string | null {
+  const destination = notificationDestination(value);
+  if (!destination) return null;
+  try {
+    const url = new URL(destination, window.location.origin);
+    if (url.pathname !== "/app/student/notes" || url.searchParams.get("record") !== "1") return null;
+    return url.searchParams.get("prompt")?.trim() || null;
+  } catch {
+    return null;
+  }
+}
+
+function withoutNotification(current: NotificationList, notification: InAppNotification): NotificationList {
+  const exists = current.notifications.some((item) => item.id === notification.id);
+  if (!exists) return current;
+  return {
+    notifications: current.notifications.filter((item) => item.id !== notification.id),
+    activeCount: Math.max(0, current.activeCount - 1),
+    unreadCount: Math.max(0, current.unreadCount - (notification.readAt ? 0 : 1)),
+  };
 }
 
 function formatNotificationTime(value: string): string {
