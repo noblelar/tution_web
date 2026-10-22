@@ -3,6 +3,8 @@ import "server-only";
 import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 
+import { attachBFFGatewayHeader } from "@/lib/backend-gateway";
+
 export const ACCESS_COOKIE = "tution_access";
 export const REFRESH_COOKIE = "tution_refresh";
 export const CSRF_COOKIE = "tution_csrf";
@@ -11,6 +13,7 @@ export const OAUTH_STATE_COOKIE_PREFIX = "tution_oauth_state_";
 
 const apiBaseUrl = process.env.INTERNAL_API_BASE_URL ?? "http://localhost:8083";
 const publicUrl = process.env.APP_PUBLIC_URL;
+const bffGatewaySecret = process.env.BFF_GATEWAY_SECRET;
 const secureCookies = publicUrl
   ? new URL(publicUrl).protocol === "https:"
   : process.env.NODE_ENV === "production";
@@ -222,6 +225,7 @@ export async function callBackend(
     if (forwardedFor) headers.set("x-forwarded-for", forwardedFor);
     if (userAgent) headers.set("user-agent", userAgent);
   }
+  attachBFFGatewayHeader(headers, bffGatewaySecret);
   return fetch(`${apiBaseUrl}${path}`, {
     ...init,
     headers,
