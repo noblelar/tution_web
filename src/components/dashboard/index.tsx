@@ -12,6 +12,7 @@ import {
   TodoListCard,
   UpcomingLessonsCard,
 } from "./dashboard-cards";
+import { DashboardShell } from "./dashboard-shell";
 
 type CurrentUser = {
   user?: {
