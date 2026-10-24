@@ -10,6 +10,7 @@ type ApiError = { error?: string };
 type AwardDraft = { credits: string; paymentMethod: "cash" | "bank_transfer" | "other"; paymentReference: string; note: string };
 
 const emptyAward: AwardDraft = { credits: "2", paymentMethod: "bank_transfer", paymentReference: "", note: "" };
+const ledgerPageSize = 25;
 const inputClass = "w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none transition focus:border-orange-500 focus:ring-4 focus:ring-orange-100 disabled:bg-slate-100";
 const labelClass = "grid gap-1.5 text-sm font-semibold text-slate-800";
 const primaryButton = "rounded-xl border border-orange-600 bg-orange-600 px-3.5 py-2 text-sm font-bold text-white transition hover:bg-orange-700 disabled:cursor-wait disabled:opacity-50";
@@ -29,7 +30,12 @@ export function CreditManagement() {
   const [loading, setLoading] = useState(true);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
-  const [notice, setNotice] = useState("");
+  const [walletNotice, setWalletNotice] = useState<{ parentProfileId: string; message: string } | null>(null);
+  const [ledgerWallet, setLedgerWallet] = useState("all");
+  const [ledgerKind, setLedgerKind] = useState("all");
+  const [ledgerFrom, setLedgerFrom] = useState("");
+  const [ledgerTo, setLedgerTo] = useState("");
+  const [ledgerPage, setLedgerPage] = useState(1);
 
   const loadContext = useCallback(async (scopeCentreId: string) => {
     const response = await fetch(`/api/credits?centreId=${encodeURIComponent(scopeCentreId)}`, { cache: "no-store" });
@@ -71,9 +77,18 @@ export function CreditManagement() {
   const fundedHouseholds = useMemo(() => (context?.wallets ?? []).filter((wallet) => wallet.balanceCredits > 0).length, [context]);
   const awardCredits = Number(awardDraft.credits);
   const isValidAward = Number.isInteger(awardCredits) && awardCredits >= 1;
+  const ledgerKinds = useMemo(() => Array.from(new Set((context?.entries ?? []).map((entry) => entry.kind))), [context]);
+  const filteredEntries = useMemo(() => (context?.entries ?? []).filter((entry) => {
+    const day = new Date(entry.createdAt).toLocaleDateString("en-CA");
+    return (ledgerWallet === "all" || entry.walletId === ledgerWallet) && (ledgerKind === "all" || entry.kind === ledgerKind) && (!ledgerFrom || day >= ledgerFrom) && (!ledgerTo || day <= ledgerTo);
+  }), [context, ledgerWallet, ledgerKind, ledgerFrom, ledgerTo]);
+  const ledgerFiltersActive = ledgerWallet !== "all" || ledgerKind !== "all" || ledgerFrom !== "" || ledgerTo !== "";
+  const pageCount = Math.max(1, Math.ceil(filteredEntries.length / ledgerPageSize));
+  const currentPage = Math.min(ledgerPage, pageCount);
+  const pagedEntries = filteredEntries.slice((currentPage - 1) * ledgerPageSize, currentPage * ledgerPageSize);
 
   async function changeCentre(nextCentreId: string) {
-    setCentreId(nextCentreId); setLoading(true); clearFeedback(); closeDialog();
+    setCentreId(nextCentreId); setLoading(true); clearFeedback(); closeDialog(); resetLedgerFilters();
     try { await loadContext(nextCentreId); }
     catch (caught) { setError(errorMessage(caught, "Credit management could not be loaded.")); }
     finally { setLoading(false); }
@@ -86,7 +101,7 @@ export function CreditManagement() {
   async function award(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!selectedWallet) return;
-    setPending(true); setError(""); setNotice("");
+    setPending(true); setError(""); setWalletNotice(null);
     try {
       const result = await mutate<CreditMutationResult>("/api/credits/awards", {
         centreId,
@@ -97,7 +112,7 @@ export function CreditManagement() {
         note: awardDraft.note || undefined,
       });
       setDialog(null);
-      setNotice(`${result.entry.deltaCredits} credits awarded to ${selectedWallet.parentFirstName} ${selectedWallet.parentLastName}.`);
+      setWalletNotice({ parentProfileId: selectedWallet.parentProfileId, message: `+${result.entry.deltaCredits} credits recorded` });
       await loadContext(centreId);
     } catch (caught) { setError(errorMessage(caught, "Credits could not be awarded.")); }
     finally { setPending(false); }
@@ -110,17 +125,19 @@ export function CreditManagement() {
   async function reverseAward(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!reversingEntry) return;
-    setPending(true); setError(""); setNotice("");
+    setPending(true); setError(""); setWalletNotice(null);
     try {
       await mutate<CreditMutationResult>(`/api/credits/${encodeURIComponent(reversingEntry.id)}/reverse`, { centreId, reason: reversalReason });
       setDialog(null);
-      setNotice("The award was reversed with a new immutable ledger entry.");
+      const reversedWallet = context?.wallets.find((wallet) => wallet.id === reversingEntry.walletId);
+      if (reversedWallet) setWalletNotice({ parentProfileId: reversedWallet.parentProfileId, message: "Award reversed" });
       await loadContext(centreId);
     } catch (caught) { setError(errorMessage(caught, "The award could not be reversed.")); }
     finally { setPending(false); }
   }
 
-  function clearFeedback() { setError(""); setNotice(""); }
+  function clearFeedback() { setError(""); setWalletNotice(null); }
+  function resetLedgerFilters() { setLedgerWallet("all"); setLedgerKind("all"); setLedgerFrom(""); setLedgerTo(""); setLedgerPage(1); }
   function closeDialog() { if (!pending) { setDialog(null); setSelectedWallet(null); setReversingEntry(null); setError(""); } }
 
   return (
@@ -131,7 +148,6 @@ export function CreditManagement() {
       </section>
 
       {error && !dialog ? <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700" role="alert">{error}</p> : null}
-      {notice ? <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700" role="status">{notice}</p> : null}
       {loading ? <p className="rounded-2xl border border-slate-200 bg-white p-6 text-slate-500">Loading household credits…</p> : null}
 
       {!loading && context ? (
@@ -165,7 +181,7 @@ export function CreditManagement() {
                       <td className="px-4 py-3">
                         <div className="flex flex-wrap gap-1.5">{wallet.children.length ? wallet.children.map((child) => <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600" key={child.id}>{child.firstName} {child.lastName}</span>) : <span className="text-xs text-slate-400">No active child at this centre</span>}</div>
                       </td>
-                      <td className="px-4 py-3 text-right"><Balance value={wallet.balanceCredits} /></td>
+                      <td className="px-4 py-3 text-right"><Balance value={wallet.balanceCredits} />{walletNotice?.parentProfileId === wallet.parentProfileId ? <span className="mt-1.5 block text-xs font-bold text-emerald-700" role="status">{walletNotice.message}</span> : null}</td>
                       <td className="px-4 py-3 text-right"><button className={`${secondaryButton} whitespace-nowrap`} disabled={pending} onClick={() => openAward(wallet)} type="button">Award credits</button></td>
                     </tr>
                   )) : <tr><td className="px-4 py-8 text-center text-slate-500" colSpan={4}>No matching households were found.</td></tr>}
@@ -176,11 +192,26 @@ export function CreditManagement() {
 
           <section className="grid gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
             <div><h2 className="text-xl font-black text-slate-950">Centre ledger</h2><p className="mt-1 text-sm text-slate-500">Entries recorded through {context.centreName}. History cannot be edited or deleted.</p></div>
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+              <label className={labelClass}>Household<select className={inputClass} onChange={(event) => { setLedgerWallet(event.target.value); setLedgerPage(1); }} value={ledgerWallet}><option value="all">All households</option>{context.wallets.map((wallet) => <option key={wallet.parentProfileId} value={wallet.id ?? ""}>{wallet.parentFirstName} {wallet.parentLastName}</option>)}</select></label>
+              <label className={labelClass}>Entry type<select className={inputClass} onChange={(event) => { setLedgerKind(event.target.value); setLedgerPage(1); }} value={ledgerKind}><option value="all">All types</option>{ledgerKinds.map((kind) => <option key={kind} value={kind}>{entryKindLabel(kind)}</option>)}</select></label>
+              <label className={labelClass}>From<input className={inputClass} onChange={(event) => { setLedgerFrom(event.target.value); setLedgerPage(1); }} type="date" value={ledgerFrom} /></label>
+              <label className={labelClass}>To<input className={inputClass} min={ledgerFrom || undefined} onChange={(event) => { setLedgerTo(event.target.value); setLedgerPage(1); }} type="date" value={ledgerTo} /></label>
+              <div className="flex items-end"><button className={`${secondaryButton} w-full`} disabled={!ledgerFiltersActive} onClick={resetLedgerFilters} type="button">Clear filters</button></div>
+            </div>
+            <p className="text-sm text-slate-500">Showing {filteredEntries.length} of {context.entries.length} entries</p>
             <div className="overflow-x-auto">
               <table className="w-full min-w-[760px] border-collapse text-left text-sm">
                 <thead><tr className="border-b border-slate-200 text-xs uppercase tracking-wide text-slate-400"><th className="px-3 py-3">Date</th><th className="px-3 py-3">Household</th><th className="px-3 py-3">Entry</th><th className="px-3 py-3">Payment</th><th className="px-3 py-3 text-right">Change</th><th className="px-3 py-3 text-right">Balance</th><th className="px-3 py-3"><span className="sr-only">Actions</span></th></tr></thead>
-                <tbody>{context.entries.length ? context.entries.map((entry) => <LedgerRow entry={entry} wallet={context.wallets.find((wallet) => wallet.id === entry.walletId)} key={entry.id} onReverse={openReversal} pending={pending} />) : <tr><td className="px-3 py-8 text-center text-slate-500" colSpan={7}>No credits have been recorded through this centre.</td></tr>}</tbody>
+                <tbody>{pagedEntries.length ? pagedEntries.map((entry) => <LedgerRow entry={entry} wallet={context.wallets.find((wallet) => wallet.id === entry.walletId)} key={entry.id} onReverse={openReversal} pending={pending} />) : <tr><td className="px-3 py-8 text-center text-slate-500" colSpan={7}>{context.entries.length ? "No entries match these filters." : "No credits have been recorded through this centre."}</td></tr>}</tbody>
               </table>
+            </div>
+            <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-slate-600">
+              <span>Page {currentPage} of {pageCount}</span>
+              <div className="flex gap-2">
+                <button className={secondaryButton} disabled={currentPage <= 1} onClick={() => setLedgerPage(currentPage - 1)} type="button">Previous</button>
+                <button className={secondaryButton} disabled={currentPage >= pageCount} onClick={() => setLedgerPage(currentPage + 1)} type="button">Next</button>
+              </div>
             </div>
           </section>
         </>
@@ -213,11 +244,18 @@ export function CreditManagement() {
   );
 }
 
+const entryKindLabels: Record<string, string> = {
+  manual_award: "Manual award",
+  manual_award_reversal: "Award reversal",
+};
+
+function entryKindLabel(kind: string) { return entryKindLabels[kind] ?? kind.replaceAll("_", " "); }
+
 function Stat({ label, value, helper }: { label: string; value: number; helper: string }) { return <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><p className="text-xs font-black uppercase tracking-wide text-slate-400">{label}</p><p className="mt-2 text-3xl font-black text-slate-950">{value}</p><p className="mt-1 text-sm text-slate-500">{helper}</p></div>; }
 function Balance({ value }: { value: number }) { return <span className={`whitespace-nowrap rounded-lg px-2.5 py-1 text-sm font-black ${value > 0 ? "bg-emerald-100 text-emerald-700" : value < 0 ? "bg-red-100 text-red-700" : "bg-slate-200 text-slate-600"}`}>{value} credits</span>; }
 
 function LedgerRow({ entry, wallet, pending, onReverse }: { entry: CreditLedgerEntry; wallet?: CreditWallet; pending: boolean; onReverse: (entry: CreditLedgerEntry) => void }) {
-  return <tr className="border-b border-slate-100 align-top"><td className="whitespace-nowrap px-3 py-4 text-slate-500">{new Intl.DateTimeFormat("en-GB", { dateStyle: "medium", timeStyle: "short" }).format(new Date(entry.createdAt))}</td><td className="px-3 py-4"><strong className="text-slate-900">{wallet ? `${wallet.parentFirstName} ${wallet.parentLastName}` : "Household"}</strong><span className="block text-xs text-slate-400">{wallet?.parentPeopleCode}</span></td><td className="px-3 py-4"><span className="font-semibold text-slate-700">{entry.kind === "manual_award" ? "Manual award" : entry.kind === "manual_award_reversal" ? "Award reversal" : entry.kind.replaceAll("_", " ")}</span>{entry.note ? <span className="block max-w-xs text-xs text-slate-400">{entry.note}</span> : null}</td><td className="px-3 py-4 text-slate-600">{entry.paymentMethod ? entry.paymentMethod.replaceAll("_", " ") : "—"}{entry.paymentReference ? <span className="block text-xs text-slate-400">{entry.paymentReference}</span> : null}</td><td className={`px-3 py-4 text-right font-black ${entry.deltaCredits > 0 ? "text-emerald-700" : "text-red-700"}`}>{entry.deltaCredits > 0 ? "+" : ""}{entry.deltaCredits}</td><td className="px-3 py-4 text-right font-bold text-slate-700">{entry.balanceAfterCredits}</td><td className="px-3 py-4 text-right">{entry.reversible ? <button className={dangerButton} disabled={pending} onClick={() => onReverse(entry)} type="button">Reverse</button> : null}</td></tr>;
+  return <tr className="border-b border-slate-100 align-top"><td className="whitespace-nowrap px-3 py-4 text-slate-500">{new Intl.DateTimeFormat("en-GB", { dateStyle: "medium", timeStyle: "short" }).format(new Date(entry.createdAt))}</td><td className="px-3 py-4"><strong className="text-slate-900">{wallet ? `${wallet.parentFirstName} ${wallet.parentLastName}` : "Household"}</strong><span className="block text-xs text-slate-400">{wallet?.parentPeopleCode}</span></td><td className="px-3 py-4"><span className="font-semibold text-slate-700">{entryKindLabel(entry.kind)}</span>{entry.note ? <span className="block max-w-xs text-xs text-slate-400">{entry.note}</span> : null}</td><td className="px-3 py-4 text-slate-600">{entry.paymentMethod ? entry.paymentMethod.replaceAll("_", " ") : "—"}{entry.paymentReference ? <span className="block text-xs text-slate-400">{entry.paymentReference}</span> : null}</td><td className={`px-3 py-4 text-right font-black ${entry.deltaCredits > 0 ? "text-emerald-700" : "text-red-700"}`}>{entry.deltaCredits > 0 ? "+" : ""}{entry.deltaCredits}</td><td className="px-3 py-4 text-right font-bold text-slate-700">{entry.balanceAfterCredits}</td><td className="px-3 py-4 text-right">{entry.reversible ? <button className={dangerButton} disabled={pending} onClick={() => onReverse(entry)} type="button">Reverse</button> : null}</td></tr>;
 }
 
 async function mutate<T>(path: string, body: Record<string, unknown>): Promise<T> {
