@@ -133,41 +133,48 @@ export function AcademicYearsPanel({ centreId }: { centreId: string }) {
 
   return (
     <>
-    <section className={`${styles.cataloguePanel} ${styles.yearsBlock}`} aria-labelledby="academic-years-title">
-      <header className={styles.panelHeader}>
-        <div>
-          <h2 id="academic-years-title">Academic years</h2>
-          <p>Planning and reporting only. Teaching continues through school holidays.</p>
-        </div>
+    <section className="grid gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm" aria-labelledby="academic-years-title">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <h2 className="text-xl font-black text-slate-950" id="academic-years-title">Academic years</h2>
         <button className="primary-button" disabled={loading || pendingAction !== ""} onClick={openCreateDialog} type="button">Add planned year</button>
-      </header>
-
-      {error && !dialogOpen ? <p className={`form-error ${styles.inlineMessage}`} role="alert">{error}</p> : null}
-      {notice ? <p className={`${styles.success} ${styles.inlineMessage}`} role="status">{notice}</p> : null}
-
-      <div className={`${styles.entries} ${styles.yearEntries}`}>
-        {loading ? <p className="loading-state">Loading academic years…</p> : null}
-        {!loading && !years.length ? <p className="empty-state">No academic years have been created yet.</p> : null}
-        {!loading ? years.map((year) => (
-          <article className={`${styles.entry} ${year.status === "current" ? styles.currentYear : ""}`} key={year.id}>
-            <div className={styles.entryHeader}>
-              <div>
-                <div className={styles.entryTitle}><h3>{year.name}</h3></div>
-                <p>{formatDate(year.startDate)} – {formatDate(year.endDate)}</p>
-              </div>
-              <span className={`status-badge ${statusClass(year.status, styles)}`}>{year.status}</span>
-            </div>
-            <div className={styles.entryFooter}>
-              {year.status === "closed" ? <span>Historical record</span> : null}
-              <div className={styles.entryActions}>
-                {year.status !== "closed" ? <button disabled={pendingAction !== ""} onClick={() => editYear(year)} type="button">Edit</button> : null}
-                {year.status === "planned" ? <button className={styles.restoreButton} disabled={pendingAction !== ""} onClick={() => void changeStatus(year, "activate")} type="button">Make current</button> : null}
-                {year.status !== "closed" ? <button className={styles.dangerButton} disabled={pendingAction !== ""} onClick={() => void changeStatus(year, "close")} type="button">Close year</button> : null}
-              </div>
-            </div>
-          </article>
-        )) : null}
       </div>
+
+      {error && !dialogOpen ? <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700" role="alert">{error}</p> : null}
+      {notice ? <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700" role="status">{notice}</p> : null}
+
+      {loading ? <p className="loading-state">Loading academic years…</p> : null}
+      {!loading && !years.length ? <p className="empty-state">No academic years have been created yet.</p> : null}
+      {!loading && years.length ? (
+        <div className="overflow-x-auto rounded-xl border border-slate-200">
+          <table className="w-full min-w-[40rem] border-collapse text-left text-sm">
+            <thead className="bg-slate-50 text-xs font-bold uppercase tracking-wide text-slate-500">
+              <tr>
+                <th className="px-4 py-3" scope="col">Year</th>
+                <th className="px-4 py-3" scope="col">Dates</th>
+                <th className="px-4 py-3" scope="col">Status</th>
+                <th className="px-4 py-3 text-right" scope="col">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {years.map((year) => (
+                <tr key={year.id}>
+                  <td className="px-4 py-3 font-black text-slate-900">{year.name}</td>
+                  <td className="px-4 py-3 text-slate-600">{formatDate(year.startDate)} – {formatDate(year.endDate)}</td>
+                  <td className="px-4 py-3"><span className={`status-badge ${statusClass(year.status, styles)}`}>{year.status}</span></td>
+                  <td className="px-4 py-3">
+                    <div className="flex flex-wrap justify-end gap-2">
+                      {year.status === "closed" ? <span className="self-center text-xs font-semibold text-slate-500">Historical record</span> : null}
+                      {year.status !== "closed" ? <button className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-bold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50" disabled={pendingAction !== ""} onClick={() => editYear(year)} type="button">Edit</button> : null}
+                      {year.status === "planned" ? <button className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-bold text-emerald-700 transition hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-50" disabled={pendingAction !== ""} onClick={() => void changeStatus(year, "activate")} type="button">Make current</button> : null}
+                      {year.status !== "closed" ? <button className="rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-bold text-red-700 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50" disabled={pendingAction !== ""} onClick={() => void changeStatus(year, "close")} type="button">Close year</button> : null}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : null}
     </section>
 
     <FormDialog

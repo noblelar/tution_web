@@ -185,17 +185,14 @@ export function AcademicSetup() {
 
   return (
     <div className={styles.setup}>
-      <section className={`management-panel ${styles.scopePanel}`} aria-labelledby="academic-setup-title">
-        <div className={styles.scopeHeader}>
-          <h2 id="academic-setup-title">Academic setup</h2>
-          <label className="scope-control">
-          Authorize through centre
-          <select disabled={loading || pendingAction !== ""} onChange={(event) => void changeCentre(event.target.value)} value={centreId}>
+      <section className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm" aria-labelledby="academic-setup-title">
+        <h2 className="text-lg font-black tracking-tight text-slate-950" id="academic-setup-title">Academic setup</h2>
+        <label className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-slate-500">
+          Centre
+          <select className="rounded-xl border border-slate-300 bg-white px-3 py-1.5 text-sm font-semibold normal-case tracking-normal text-slate-900 outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-100 disabled:bg-slate-100" disabled={loading || pendingAction !== ""} onChange={(event) => void changeCentre(event.target.value)} value={centreId}>
             {centres.map((centre) => <option key={centre.id} value={centre.id}>{centre.name} ({centre.code})</option>)}
           </select>
-          </label>
-        </div>
-        {!loading && centreId ? <AcademicYearsPanel centreId={centreId} /> : null}
+        </label>
       </section>
 
       {error && !dialogKind ? <p className={`form-error ${styles.message}`} role="alert">{error}</p> : null}
@@ -204,6 +201,7 @@ export function AcademicSetup() {
 
       {!loading && centreId ? (
         <>
+          <AcademicYearsPanel centreId={centreId} />
           <div className={styles.catalogueGrid}>
           <CataloguePanel
             title="Academic levels"
