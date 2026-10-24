@@ -185,18 +185,17 @@ export function AcademicSetup() {
 
   return (
     <div className={styles.setup}>
-      <section className={`management-panel ${styles.scopePanel}`} aria-labelledby="academic-scope-title">
-        <div>
-          <p className="eyebrow">Management scope</p>
-          <h2 id="academic-scope-title">Shared academic catalogue</h2>
-          <p>Levels and subjects are shared across Tution. Your selected centre confirms where your manager permission applies and is recorded in the audit event.</p>
-        </div>
-        <label className="scope-control">
+      <section className={`management-panel ${styles.scopePanel}`} aria-labelledby="academic-setup-title">
+        <div className={styles.scopeHeader}>
+          <h2 id="academic-setup-title">Academic setup</h2>
+          <label className="scope-control">
           Authorize through centre
           <select disabled={loading || pendingAction !== ""} onChange={(event) => void changeCentre(event.target.value)} value={centreId}>
             {centres.map((centre) => <option key={centre.id} value={centre.id}>{centre.name} ({centre.code})</option>)}
           </select>
-        </label>
+          </label>
+        </div>
+        {!loading && centreId ? <AcademicYearsPanel centreId={centreId} /> : null}
       </section>
 
       {error && !dialogKind ? <p className={`form-error ${styles.message}`} role="alert">{error}</p> : null}
@@ -205,7 +204,6 @@ export function AcademicSetup() {
 
       {!loading && centreId ? (
         <>
-          <AcademicYearsPanel centreId={centreId} />
           <div className={styles.catalogueGrid}>
           <CataloguePanel
             title="Academic levels"

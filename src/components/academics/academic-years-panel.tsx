@@ -131,16 +131,13 @@ export function AcademicYearsPanel({ centreId }: { centreId: string }) {
     setDialogOpen(false);
   }
 
-  const currentYear = years.find((year) => year.status === "current");
-
   return (
     <>
-    <section className={`management-panel ${styles.cataloguePanel} ${styles.yearsPanel}`} aria-labelledby="academic-years-title">
+    <section className={`${styles.cataloguePanel} ${styles.yearsBlock}`} aria-labelledby="academic-years-title">
       <header className={styles.panelHeader}>
         <div>
-          <p className="eyebrow">{currentYear ? `Current: ${currentYear.name}` : "No current year selected"}</p>
           <h2 id="academic-years-title">Academic years</h2>
-          <p>Use one high-level year for planning and reporting. This is not an operating calendar: Tution can continue teaching during school holidays.</p>
+          <p>Planning and reporting only. Teaching continues through school holidays.</p>
         </div>
         <button className="primary-button" disabled={loading || pendingAction !== ""} onClick={openCreateDialog} type="button">Add planned year</button>
       </header>
@@ -161,7 +158,7 @@ export function AcademicYearsPanel({ centreId }: { centreId: string }) {
               <span className={`status-badge ${statusClass(year.status, styles)}`}>{year.status}</span>
             </div>
             <div className={styles.entryFooter}>
-              <span>{year.status === "closed" ? "Historical record" : "Planning and reporting scope"}</span>
+              {year.status === "closed" ? <span>Historical record</span> : null}
               <div className={styles.entryActions}>
                 {year.status !== "closed" ? <button disabled={pendingAction !== ""} onClick={() => editYear(year)} type="button">Edit</button> : null}
                 {year.status === "planned" ? <button className={styles.restoreButton} disabled={pendingAction !== ""} onClick={() => void changeStatus(year, "activate")} type="button">Make current</button> : null}
