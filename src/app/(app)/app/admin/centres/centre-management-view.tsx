@@ -2,7 +2,9 @@
 
 import { ChangeEvent, FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 
+import { feedbackButton } from "@/components/feedback/feedback-display";
 import { FormDialog } from "@/components/ui/form-dialog";
+import { SummaryStat } from "@/components/ui/summary-stat";
 import { centreManagementCapabilities } from "@/lib/centre-access";
 import {
   CentreAccessRole,
@@ -130,11 +132,6 @@ export function CentreManagement() {
   const isOwner = roleKeys.includes("owner");
   const isManager = roleKeys.includes("manager");
   const isTutor = roleKeys.includes("tutor");
-  const roleSummary = roleKeys.length
-    ? roleKeys.join(" · ")
-    : loading
-      ? "Checking your access…"
-      : "No centre role returned";
 
   const filteredCentres = useMemo(() => {
     const needle = query.trim().toLowerCase();
@@ -375,13 +372,6 @@ export function CentreManagement() {
     }
   }
 
-  const accessTitle = isOwner
-    ? "Owner controls"
-    : isManager
-      ? "Assigned-centre controls"
-      : isTutor
-        ? "Assigned-centre view"
-        : "Centre access";
   const accessDescription = isOwner
     ? "Manage every centre, including creation and permanent deletion when no platform data is linked."
     : isManager
@@ -392,36 +382,17 @@ export function CentreManagement() {
 
   return (
     <main className="admin-main grid gap-6" aria-labelledby="centres-page-title">
-      <header className="admin-dashboard-hero">
-        <div>
-          <h1 id="centres-page-title">Centres</h1>
-        </div>
-      </header>
-
       <section
-        className="management-panel grid gap-5 xl:grid-cols-[minmax(0,1fr)_auto_auto] xl:items-center"
-        aria-labelledby="centres-summary-title"
+        className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm"
+        aria-labelledby="centres-page-title"
       >
-        <div className="grid gap-2">
-          <p className="eyebrow">{accessTitle}</p>
-          <h2 id="centres-summary-title">Tuition centres</h2>
-          <p className="max-w-3xl text-sm leading-6 text-slate-600">{accessDescription}</p>
-        </div>
-        <div className="grid gap-3">
-          <div className="flex flex-wrap gap-2" aria-label="Centre status summary">
-            <span className="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-bold text-slate-600"><strong className="text-slate-950">{centres.length}</strong> total</span>
-            <span className="rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-bold text-emerald-700"><strong className="text-emerald-950">{activeCount}</strong> active</span>
-            <span className="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-bold text-slate-600"><strong className="text-slate-950">{inactiveCount}</strong> inactive</span>
-          </div>
-          <div
-            className={`grid gap-0.5 rounded-xl border px-3.5 py-2.5 text-xs font-bold ${isOwner ? "border-emerald-200 bg-emerald-50 text-emerald-800" : isManager ? "border-blue-200 bg-blue-50 text-blue-800" : "border-slate-200 bg-slate-50 text-slate-700"}`}
-            role="status"
-          >
-            <span>{isOwner ? "Full organization access" : isManager ? "Assigned centres are editable" : isTutor ? "Assigned centres are read-only" : "Centre role not detected"}</span>
-            <span className="font-medium opacity-80">Roles: {roleSummary}</span>
-          </div>
-        </div>
-        {pageCapabilities.canCreate ? <button className={primaryButtonClasses} type="button" onClick={openCreateDialog}>Add centre</button> : null}
+        <h1 id="centres-page-title" className="text-lg font-black tracking-tight text-slate-950" title={accessDescription}>Centres</h1>
+        <dl className="flex flex-wrap items-center gap-x-5 gap-y-2" aria-label="Centre status summary">
+          <SummaryStat label="Total" value={centres.length} tooltip="All centres in this organization" />
+          <SummaryStat label="Active" value={activeCount} tooltip="Centres currently open for operations" />
+          <SummaryStat label="Inactive" value={inactiveCount} tooltip="Centres currently deactivated" />
+        </dl>
+        {pageCapabilities.canCreate ? <button className={feedbackButton} type="button" onClick={openCreateDialog}>Add centre</button> : null}
       </section>
 
       <section className="management-panel grid gap-5" aria-labelledby="centres-list-title">
