@@ -22,6 +22,13 @@ type StaffRole = "owner" | "manager" | "tutor";
 type RoleOperation = "assign" | "remove";
 
 const roleLabels: Record<StaffRole, string> = { owner: "Owner", manager: "Manager", tutor: "Tutor" };
+const statusFilters = [
+  { value: "all", label: "All" },
+  { value: "active", label: "Active" },
+  { value: "pending_activation", label: "Pending" },
+  { value: "suspended", label: "Suspended" },
+  { value: "disabled", label: "Disabled" },
+];
 const inputClasses = "w-full rounded-xl border border-slate-300 bg-white px-3.5 py-3 text-sm text-slate-900 outline-none transition focus:border-orange-500 focus:ring-4 focus:ring-orange-100 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500";
 const primaryButtonClasses = "inline-flex min-h-11 items-center justify-center rounded-xl border border-orange-600 bg-orange-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:border-orange-700 hover:bg-orange-700 focus:outline-none focus:ring-4 focus:ring-orange-100 disabled:cursor-not-allowed disabled:opacity-55";
 const secondaryButtonClasses = "inline-flex min-h-11 items-center justify-center rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 transition hover:border-slate-400 hover:bg-slate-50 focus:outline-none focus:ring-4 focus:ring-slate-100 disabled:cursor-not-allowed disabled:opacity-55";
@@ -56,6 +63,8 @@ export function AccountManagement() {
   const [deletionTarget, setDeletionTarget] = useState<ManagedAccount | null>(null);
   const [deletionMessage, setDeletionMessage] = useState("");
   const [expandedAccountId, setExpandedAccountId] = useState("");
+  const [query, setQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
   const accountsRequest = useRef(0);
 
   const loadAccounts = useCallback(async (centreId: string) => {
@@ -71,6 +80,14 @@ export function AccountManagement() {
     () => accounts.filter((account) => account.accountStatus === "active" && hasRole(account, "owner")).length,
     [accounts],
   );
+
+  const visibleAccounts = useMemo(() => {
+    const term = query.trim().toLowerCase();
+    return accounts.filter((account) =>
+      (statusFilter === "all" || account.accountStatus === statusFilter) &&
+      (term === "" || `${account.firstName} ${account.lastName} ${account.email}`.toLowerCase().includes(term)),
+    );
+  }, [accounts, query, statusFilter]);
 
   const assignableRoles = useMemo(() => {
     if (!context || !roleTarget) return [];
@@ -336,7 +353,7 @@ export function AccountManagement() {
         <div className="panel-heading">
           <div><p className="eyebrow">Centre scope</p><h2 id="accounts-title">Managed accounts</h2></div>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-            <label className="grid min-w-48 gap-1.5 text-sm font-bold text-slate-700">View
+            <label className="grid min-w-48 gap-1.5 text-sm font-bold text-slate-700">Centre
               <select className={inputClasses} value={scope} onChange={(event) => void changeScope(event.target.value)}>
                 {context.capabilities.canCreateManagers ? <option value="">All centres</option> : null}
                 {context.centres.map((centre) => <option key={centre.id} value={centre.id}>{centre.name}</option>)}
@@ -373,7 +390,32 @@ export function AccountManagement() {
         {deletionMessage ? <p className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900" role="status">{deletionMessage}</p> : null}
         {loading ? <p className="loading-state">Refreshing accounts…</p> : null}
         {!loading && accounts.length === 0 ? <p className="empty-state">No managed accounts are in this scope yet.</p> : null}
-        <div className="mt-5 max-h-[65vh] overflow-auto rounded-xl border border-slate-200">
+        {accounts.length > 0 ? (
+          <div className="mt-5 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+            <div className="flex flex-wrap gap-2" role="group" aria-label="Filter by status">
+              {statusFilters.map((filter) => {
+                const selected = statusFilter === filter.value;
+                const count = filter.value === "all" ? accounts.length : accounts.filter((account) => account.accountStatus === filter.value).length;
+                return (
+                  <button
+                    aria-pressed={selected}
+                    className={`inline-flex min-h-9 items-center gap-2 rounded-full border px-3.5 py-1.5 text-xs font-bold transition focus:outline-none focus:ring-4 focus:ring-orange-100 ${selected ? "border-orange-600 bg-orange-600 text-white" : "border-slate-300 bg-white text-slate-700 hover:border-slate-400 hover:bg-slate-50"}`}
+                    key={filter.value}
+                    onClick={() => setStatusFilter(filter.value)}
+                    type="button"
+                  >
+                    {filter.label}
+                    <span className={selected ? "text-orange-100" : "text-slate-500"}>{count}</span>
+                  </button>
+                );
+              })}
+            </div>
+            <label className="grid gap-1.5 text-sm font-bold text-slate-700 lg:w-72">Search
+              <input className={inputClasses} onChange={(event) => setQuery(event.target.value)} placeholder="Name or email" type="search" value={query} />
+            </label>
+          </div>
+        ) : null}
+        <div className="mt-4 max-h-[65vh] overflow-auto rounded-xl border border-slate-200">
           <table className="w-full min-w-[60rem] border-collapse text-sm">
             <thead className="sticky top-0 z-10 bg-slate-50 text-left text-xs font-bold uppercase tracking-wide text-slate-500">
               <tr>
@@ -386,7 +428,7 @@ export function AccountManagement() {
               </tr>
             </thead>
             <tbody>
-              {accounts.map((account) => {
+              {visibleAccounts.map((account) => {
                 const expanded = expandedAccountId === account.id;
                 const detailsId = `account-details-${account.id}`;
                 return (
@@ -501,6 +543,11 @@ export function AccountManagement() {
                   </Fragment>
                 );
               })}
+              {accounts.length > 0 && visibleAccounts.length === 0 ? (
+                <tr>
+                  <td className="px-4 py-6 text-center text-slate-600" colSpan={6}>No accounts match these filters.</td>
+                </tr>
+              ) : null}
             </tbody>
           </table>
         </div>
