@@ -142,9 +142,16 @@ export function CreditManagement() {
 
   return (
     <div className="grid gap-6">
-      <section className="grid gap-5 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm lg:grid-cols-[1fr_auto] lg:items-end">
-        <div><p className="mb-2 text-xs font-black uppercase tracking-[0.16em] text-orange-600">Household wallets</p><h2 className="text-2xl font-black tracking-tight text-slate-950">Manual credit management</h2><p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">Record paid tuition hours against a parent&apos;s shared family wallet. Every change is retained in an immutable centre-attributed ledger.</p></div>
-        <label className="grid min-w-64 gap-1.5 text-sm font-bold text-slate-700">Management centre<select className={inputClass} disabled={loading || pending} onChange={(event) => void changeCentre(event.target.value)} value={centreId}>{centres.map((centre) => <option key={centre.id} value={centre.id}>{centre.name} ({centre.code})</option>)}</select></label>
+      <section className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
+        <h2 className="text-lg font-black tracking-tight text-slate-950">Credit management</h2>
+        {!loading && context ? (
+          <dl className="flex flex-wrap items-center gap-x-5 gap-y-2" aria-label="Credit summary">
+            <Stat label="Households" value={context.wallets.length} helper={`Visible through ${context.centreName}`} />
+            <Stat label="Funded households" value={fundedHouseholds} helper="Balances above zero" />
+            <Stat label="Combined balance" value={totalBalance} helper="Credits across visible wallets" />
+          </dl>
+        ) : null}
+        <label className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-slate-500">Centre<select className="rounded-xl border border-slate-300 bg-white px-3 py-1.5 text-sm font-semibold normal-case tracking-normal text-slate-900 outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-100 disabled:bg-slate-100" disabled={loading || pending} onChange={(event) => void changeCentre(event.target.value)} value={centreId}>{centres.map((centre) => <option key={centre.id} value={centre.id}>{centre.name} ({centre.code})</option>)}</select></label>
       </section>
 
       {error && !dialog ? <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700" role="alert">{error}</p> : null}
@@ -152,12 +159,6 @@ export function CreditManagement() {
 
       {!loading && context ? (
         <>
-          <section className="grid gap-4 sm:grid-cols-3" aria-label="Credit summary">
-            <Stat label="Households" value={context.wallets.length} helper={`Visible through ${context.centreName}`} />
-            <Stat label="Funded households" value={fundedHouseholds} helper="Balances above zero" />
-            <Stat label="Combined balance" value={totalBalance} helper="Credits across visible wallets" />
-          </section>
-
           <section className="grid gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
             <div className="flex flex-wrap items-end justify-between gap-3"><div><h2 className="text-xl font-black text-slate-950">Households</h2><p className="mt-1 text-sm text-slate-500">Choose a household to record paid credit.</p></div><label className="grid min-w-64 gap-1 text-xs font-bold uppercase tracking-wide text-slate-500">Search<input className={inputClass} onChange={(event) => setSearch(event.target.value)} placeholder="Parent, child, email or code" type="search" value={search} /></label></div>
             <div className="overflow-x-auto rounded-xl border border-slate-200">
@@ -251,7 +252,7 @@ const entryKindLabels: Record<string, string> = {
 
 function entryKindLabel(kind: string) { return entryKindLabels[kind] ?? kind.replaceAll("_", " "); }
 
-function Stat({ label, value, helper }: { label: string; value: number; helper: string }) { return <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><p className="text-xs font-black uppercase tracking-wide text-slate-400">{label}</p><p className="mt-2 text-3xl font-black text-slate-950">{value}</p><p className="mt-1 text-sm text-slate-500">{helper}</p></div>; }
+function Stat({ label, value, helper }: { label: string; value: number; helper: string }) { return <div className="flex items-baseline gap-1.5" title={helper}><dt className="text-xs font-bold uppercase tracking-wide text-slate-500">{label}</dt><dd className="text-sm font-black text-slate-950">{value}</dd></div>; }
 function Balance({ value }: { value: number }) { return <span className={`whitespace-nowrap rounded-lg px-2.5 py-1 text-sm font-black ${value > 0 ? "bg-emerald-100 text-emerald-700" : value < 0 ? "bg-red-100 text-red-700" : "bg-slate-200 text-slate-600"}`}>{value} credits</span>; }
 
 function LedgerRow({ entry, wallet, pending, onReverse }: { entry: CreditLedgerEntry; wallet?: CreditWallet; pending: boolean; onReverse: (entry: CreditLedgerEntry) => void }) {
