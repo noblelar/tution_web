@@ -219,30 +219,29 @@ export function BookingManagement() {
       <section className="grid gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
         <div>
           <h2 className="text-xl font-black text-slate-950">Booking register</h2>
-          <p className="mt-1 text-sm text-slate-500">Selected subjects and student lesson-focus notes remain visible for operational review.</p>
         </div>
-        <div className="grid gap-3">
-          {context.bookings.length ? context.bookings.map((item) => (
-            <article className="grid gap-4 rounded-xl border border-slate-200 p-4 lg:grid-cols-[1fr_auto] lg:items-center" key={item.id}>
-              <div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <strong className="text-slate-900">{item.studentFirstName} {item.studentLastName} · {item.subjectCode} · {item.subjectName}</strong>
-                  <Status value={item.status} />
-                  {item.lessonFocusLocked ? <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-black uppercase tracking-wide text-slate-600">Attendance recorded</span> : null}
-                </div>
-                <p className="mt-1 text-sm text-slate-500">{formatDate(item.startsAt, item.centreTimeZone)} · {item.parentName} · Balance {item.walletBalance}{item.queuePosition ? ` · Queue ${item.queuePosition}` : ""}</p>
-                {item.lessonFocus ? (
-                  <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5">
-                    <p className="text-xs font-black uppercase tracking-wide text-slate-400">Lesson focus</p>
-                    <p className="mt-1 whitespace-pre-wrap text-sm leading-6 text-slate-700">{item.lessonFocus}</p>
+        <div className="grid gap-5">
+          {context.bookings.length ? groupBookingsByStudent(context.bookings).map((group) => (
+            <div className="grid gap-2" key={group.studentProfileId}>
+              <h3 className="text-sm font-black text-slate-900">{group.name}</h3>
+              {group.bookings.map((item) => (
+                <article className="grid gap-3 rounded-xl border border-slate-200 p-4 lg:grid-cols-[1fr_auto] lg:items-center" key={item.id}>
+                  <div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <strong className="text-slate-900">{item.subjectCode} · {item.subjectName}</strong>
+                      <Status value={item.status} />
+                      {item.lessonFocusLocked ? <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-black uppercase tracking-wide text-slate-600">Attendance recorded</span> : null}
+                    </div>
+                    <p className="mt-1 text-sm text-slate-500">{formatDate(item.startsAt, item.centreTimeZone)} · {item.parentName}{item.queuePosition ? ` · Queue ${item.queuePosition}` : ""}</p>
+                    {item.lessonFocus ? <p className="mt-1 text-sm text-slate-600"><span className="font-bold text-slate-500">Lesson focus:</span> {item.lessonFocus}</p> : null}
                   </div>
-                ) : null}
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {(item.status === "waitlisted" || item.status === "credits_required") && item.queuePosition === 1 ? <button className={primaryButton} disabled={Boolean(pending)} onClick={() => void confirmWaiting(item)} type="button">Confirm place</button> : null}
-                {canCancelBooking(item.status, item.lessonFocusLocked) ? <button className={dangerButton} disabled={Boolean(pending)} onClick={() => { setTargetBooking(item); setReason(""); setDialog("cancel-booking"); setError(""); }} type="button">Cancel</button> : item.status !== "cancelled" ? <span className="self-center text-xs font-semibold text-slate-600">Cancellation unavailable after attendance</span> : null}
-              </div>
-            </article>
+                  <div className="flex flex-wrap gap-2">
+                    {(item.status === "waitlisted" || item.status === "credits_required") && item.queuePosition === 1 ? <button className={primaryButton} disabled={Boolean(pending)} onClick={() => void confirmWaiting(item)} type="button">Confirm place</button> : null}
+                    {canCancelBooking(item.status, item.lessonFocusLocked) ? <button className={dangerButton} disabled={Boolean(pending)} onClick={() => { setTargetBooking(item); setReason(""); setDialog("cancel-booking"); setError(""); }} type="button">Cancel</button> : item.status !== "cancelled" ? <span className="self-center text-xs font-semibold text-slate-600">Cancellation unavailable after attendance</span> : null}
+                  </div>
+                </article>
+              ))}
+            </div>
           )) : <Empty text="No bookings have been recorded in this centre." />}
         </div>
       </section>
@@ -304,6 +303,16 @@ export function BookingManagement() {
 
 function ReasonDialog({ open, title, description, dangerLabel, reason, setReason, pending, error, onClose, onSubmit }: { open: boolean; title: string; description: string; dangerLabel: string; reason: string; setReason: (value: string) => void; pending: boolean; error: string; onClose: () => void; onSubmit: (event: FormEvent<HTMLFormElement>) => Promise<void> }) { return <FormDialog open={open} title={title} description={description} onOpenChange={(value) => { if (!value) onClose(); }}><form className="grid gap-4 p-5" onSubmit={onSubmit}><label className="grid gap-1.5 text-sm font-bold text-slate-700">Reason<textarea className={`${inputClass} min-h-28 resize-y`} maxLength={1000} onChange={(event) => setReason(event.target.value)} required value={reason} /></label>{error ? <p className="rounded-xl bg-red-50 p-3 text-sm font-semibold text-red-700">{error}</p> : null}<div className="flex justify-end gap-2 border-t border-slate-100 pt-4"><button className={secondaryButton} disabled={pending} onClick={onClose} type="button">Keep record</button><button className={dangerButton} disabled={pending} type="submit">{pending ? "Processing…" : dangerLabel}</button></div></form></FormDialog>; }
 function Status({ value }: { value: SessionBooking["status"] }) { const style = value === "confirmed" ? "bg-emerald-100 text-emerald-700" : value === "cancelled" ? "bg-slate-100 text-slate-600" : value === "credits_required" ? "bg-red-100 text-red-700" : "bg-amber-100 text-amber-700"; return <span className={`rounded-full px-2.5 py-1 text-xs font-black uppercase tracking-wide ${style}`}>{value.replaceAll("_", " ")}</span>; }
+function groupBookingsByStudent(bookings: SessionBooking[]) {
+  const groups = new Map<string, { studentProfileId: string; name: string; bookings: SessionBooking[] }>();
+  for (const booking of bookings) {
+    const group = groups.get(booking.studentProfileId) ?? { studentProfileId: booking.studentProfileId, name: `${booking.studentFirstName} ${booking.studentLastName}`, bookings: [] };
+    group.bookings.push(booking);
+    groups.set(booking.studentProfileId, group);
+  }
+  return [...groups.values()];
+}
+
 function Empty({ text }: { text: string }) { return <p className="rounded-xl border border-dashed border-slate-300 p-8 text-center text-slate-500 md:col-span-2">{text}</p>; }
 function formatDate(value: string, timeZone: string) { return new Intl.DateTimeFormat("en-GB", { timeZone, weekday: "short", day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }).format(new Date(value)); }
 async function mutate<T = unknown>(path: string, method: "POST" | "PUT", body: Record<string, unknown>): Promise<T> { const csrfResponse = await fetch("/api/auth/csrf", { cache: "no-store" }); const csrf = (await csrfResponse.json().catch(() => ({}))) as { csrfToken?: string; error?: string }; if (!csrfResponse.ok || !csrf.csrfToken) throw new Error(csrf.error ?? "Request verification is unavailable."); const response = await fetch(path, { method, headers: { "content-type": "application/json", "x-csrf-token": csrf.csrfToken }, body: JSON.stringify(body) }); const result = (await response.json().catch(() => ({}))) as T & ApiError; if (!response.ok) throw new Error(result.error ?? "The booking change could not be completed."); return result; }
