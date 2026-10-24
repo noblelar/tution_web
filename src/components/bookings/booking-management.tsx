@@ -3,6 +3,7 @@
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 
 import { FormDialog } from "@/components/ui/form-dialog";
+import { SummaryStat } from "@/components/ui/summary-stat";
 import { canCancelBooking, canCancelSession } from "@/lib/booking-rules";
 import type { BookingContext, BookingParticipant, SessionBooking, SessionCancellationResult } from "@/lib/booking-types";
 import type { CentreList, ManagedCentre } from "@/lib/centre-types";
@@ -162,12 +163,21 @@ export function BookingManagement() {
   function closeDialog() { if (!pending) { setDialog(null); setTargetBooking(null); setTargetSession(null); setSessionSubjectId(""); setReason(""); setError(""); } }
 
   return <div className="grid gap-6">
-    <section className="grid gap-5 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm lg:grid-cols-[1fr_auto] lg:items-end"><div><p className="mb-2 text-xs font-black uppercase tracking-[0.16em] text-orange-600">Session operations</p><h2 className="text-2xl font-black text-slate-950">Booking management</h2><p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">Book students, control self-booking access, manage the waiting list, and cancel sessions with immediate credit settlement.</p></div><label className="grid min-w-64 gap-1.5 text-sm font-bold text-slate-700">Management centre<select className={inputClass} disabled={loading || Boolean(pending)} onChange={(event) => void changeCentre(event.target.value)} value={centreId}>{centres.map((centre) => <option key={centre.id} value={centre.id}>{centre.name} ({centre.code})</option>)}</select></label></section>
+    <section className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
+      <h2 className="text-lg font-black tracking-tight text-slate-950">Bookings</h2>
+      {!loading && context ? (
+        <dl className="flex flex-wrap items-center gap-x-5 gap-y-2" aria-label="Booking summary">
+          <SummaryStat label="Confirmed" value={confirmed} tooltip="Students with a confirmed booking" />
+          <SummaryStat label="Waiting" value={waiting} tooltip="Waitlisted or awaiting credits" />
+          <SummaryStat label="Published sessions" value={published.length} tooltip="Open operational sessions" />
+        </dl>
+      ) : null}
+      <label className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-slate-500">Centre<select className="rounded-xl border border-slate-300 bg-white px-3 py-1.5 text-sm font-semibold normal-case tracking-normal text-slate-900 outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-100 disabled:bg-slate-100" disabled={loading || Boolean(pending)} onChange={(event) => void changeCentre(event.target.value)} value={centreId}>{centres.map((centre) => <option key={centre.id} value={centre.id}>{centre.name} ({centre.code})</option>)}</select></label>
+    </section>
     {error && !dialog ? <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700" role="alert">{error}</p> : null}
     {notice ? <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700" role="status">{notice}</p> : null}
     {loading ? <p className="rounded-2xl border border-slate-200 bg-white p-6 text-slate-500">Loading booking operations…</p> : null}
     {!loading && context ? <>
-      <section className="grid gap-4 sm:grid-cols-3"><Stat label="Confirmed" value={confirmed} helper="Two credits settled" /><Stat label="Waiting" value={waiting} helper="No credit used yet" /><Stat label="Published sessions" value={published.length} helper="Open operational sessions" /></section>
       <section className="grid gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
@@ -269,7 +279,6 @@ export function BookingManagement() {
 }
 
 function ReasonDialog({ open, title, description, dangerLabel, reason, setReason, pending, error, onClose, onSubmit }: { open: boolean; title: string; description: string; dangerLabel: string; reason: string; setReason: (value: string) => void; pending: boolean; error: string; onClose: () => void; onSubmit: (event: FormEvent<HTMLFormElement>) => Promise<void> }) { return <FormDialog open={open} title={title} description={description} onOpenChange={(value) => { if (!value) onClose(); }}><form className="grid gap-4 p-5" onSubmit={onSubmit}><label className="grid gap-1.5 text-sm font-bold text-slate-700">Reason<textarea className={`${inputClass} min-h-28 resize-y`} maxLength={1000} onChange={(event) => setReason(event.target.value)} required value={reason} /></label>{error ? <p className="rounded-xl bg-red-50 p-3 text-sm font-semibold text-red-700">{error}</p> : null}<div className="flex justify-end gap-2 border-t border-slate-100 pt-4"><button className={secondaryButton} disabled={pending} onClick={onClose} type="button">Keep record</button><button className={dangerButton} disabled={pending} type="submit">{pending ? "Processing…" : dangerLabel}</button></div></form></FormDialog>; }
-function Stat({ label, value, helper }: { label: string; value: number; helper: string }) { return <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><p className="text-xs font-black uppercase tracking-wide text-slate-400">{label}</p><p className="mt-2 text-3xl font-black text-slate-950">{value}</p><p className="mt-1 text-sm text-slate-500">{helper}</p></div>; }
 function Status({ value }: { value: SessionBooking["status"] }) { const style = value === "confirmed" ? "bg-emerald-100 text-emerald-700" : value === "cancelled" ? "bg-slate-100 text-slate-600" : value === "credits_required" ? "bg-red-100 text-red-700" : "bg-amber-100 text-amber-700"; return <span className={`rounded-full px-2.5 py-1 text-xs font-black uppercase tracking-wide ${style}`}>{value.replaceAll("_", " ")}</span>; }
 function Empty({ text }: { text: string }) { return <p className="rounded-xl border border-dashed border-slate-300 p-8 text-center text-slate-500 md:col-span-2">{text}</p>; }
 function formatDate(value: string, timeZone: string) { return new Intl.DateTimeFormat("en-GB", { timeZone, weekday: "short", day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }).format(new Date(value)); }
