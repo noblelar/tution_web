@@ -8,7 +8,6 @@ import type { CentreList, ManagedCentre } from "@/lib/centre-types";
 import { formatSessionDateTime, formatSessionTime } from "@/lib/session-rules";
 import { QrCode } from "./qr-code";
 
-const inputClass = "w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm font-semibold text-slate-900 outline-none transition focus:border-orange-500 focus:ring-4 focus:ring-orange-100 disabled:bg-slate-100";
 const statuses: AttendanceStatus[] = ["present", "late", "absent", "excused"];
 
 export function AttendanceManagement({ tutorWorkspace = false }: { tutorWorkspace?: boolean }) {
@@ -95,15 +94,11 @@ export function AttendanceManagement({ tutorWorkspace = false }: { tutorWorkspac
 
   return (
     <div className="grid gap-6">
-      <section className="grid gap-5 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm lg:grid-cols-[1fr_auto] lg:items-end">
-        <div>
-          <p className="mb-2 text-xs font-black uppercase tracking-[0.16em] text-orange-600">Session operations</p>
-          <h2 className="text-2xl font-black tracking-tight text-slate-950">Attendance workspace</h2>
-          <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">Mark confirmed students by their booked subject, review lesson-focus notes, protect QR self-check-ins, and settle absent or excused credits from one session roster.</p>
-        </div>
-        <label className="grid min-w-64 gap-1.5 text-sm font-bold text-slate-700">
-          {tutorWorkspace ? "Assigned centre" : "Management centre"}
-          <select className={inputClass} disabled={loading || pending !== ""} onChange={(event) => void changeCentre(event.target.value)} value={centreId}>
+      <section className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
+        <h2 className="text-lg font-black tracking-tight text-slate-950">Attendance</h2>
+        <label className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-slate-500">
+          {tutorWorkspace ? "Assigned centre" : "Centre"}
+          <select className="rounded-xl border border-slate-300 bg-white px-3 py-1.5 text-sm font-semibold normal-case tracking-normal text-slate-900 outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-100 disabled:bg-slate-100" disabled={loading || pending !== ""} onChange={(event) => void changeCentre(event.target.value)} value={centreId}>
             {centres.map((centre) => <option key={centre.id} value={centre.id}>{centre.name} ({centre.code})</option>)}
           </select>
         </label>
@@ -211,4 +206,3 @@ async function mutate<T = unknown>(path: string, method: "POST" | "PUT", body: u
 
 async function apiError(response: Response, fallback: string) { try { const result = (await response.json()) as { error?: string }; return result.error ?? fallback; } catch { return fallback; } }
 function message(error: unknown, fallback: string) { return error instanceof Error ? error.message : fallback; }
-
