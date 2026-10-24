@@ -157,7 +157,7 @@ export function FeedbackWorkspace({ audience }: { audience: FeedbackWorkspaceMod
 
       <div className="grid gap-5">
         {mode === "admin" ? <section className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
-          <h1 className="text-lg font-black tracking-tight text-slate-950">Feedback &amp; Queries</h1>
+          <h2 className="text-lg font-black tracking-tight text-slate-950">Feedback &amp; Queries</h2>
           {!loading && current ? <dl className="flex flex-wrap items-center gap-x-5 gap-y-2" aria-label="Feedback summary">
             <InlineStat label="Published feedback" value={feedback.filter((item) => item.status === "published").length} helper="Feedback shared with households" />
             <InlineStat label="Active centre queries" value={queries.filter((item) => item.status !== "resolved").length} helper="Queries not yet resolved" />
