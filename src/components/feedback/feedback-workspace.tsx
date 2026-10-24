@@ -151,15 +151,24 @@ export function FeedbackWorkspace({ audience }: { audience: FeedbackWorkspaceMod
 
   return (
     <main className="management-shell">
-      <header className="management-header">
-        <div><p className="eyebrow">{mode === "admin" ? "Tution administration" : mode === "tutor" ? "Tutor workspace" : "Your tuition centre"}</p><h1>Feedback &amp; Queries</h1><p className="mt-3 max-w-3xl text-sm leading-6 text-slate-500">{mode === "admin" ? "Review session feedback and manage the private centre inbox, tutor assignments, and query follow-up." : mode === "tutor" ? "Share feedback after attendance and respond to queries assigned to you." : "Read tutor feedback and ask your centre about learning, sessions, bookings, or attendance."}</p></div>
-      </header>
+      {mode === "admin" ? null : <header className="management-header">
+        <div><p className="eyebrow">{mode === "tutor" ? "Tutor workspace" : "Your tuition centre"}</p><h1>Feedback &amp; Queries</h1><p className="mt-3 max-w-3xl text-sm leading-6 text-slate-500">{mode === "tutor" ? "Share feedback after attendance and respond to queries assigned to you." : "Read tutor feedback and ask your centre about learning, sessions, bookings, or attendance."}</p></div>
+      </header>}
 
       <div className="grid gap-5">
+        {mode === "admin" ? <section className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
+          <h1 className="text-lg font-black tracking-tight text-slate-950">Feedback &amp; Queries</h1>
+          {!loading && current ? <dl className="flex flex-wrap items-center gap-x-5 gap-y-2" aria-label="Feedback summary">
+            <InlineStat label="Published feedback" value={feedback.filter((item) => item.status === "published").length} helper="Feedback shared with households" />
+            <InlineStat label="Active centre queries" value={queries.filter((item) => item.status !== "resolved").length} helper="Queries not yet resolved" />
+            <InlineStat label="Resolved queries" value={queries.filter((item) => item.status === "resolved").length} helper="Queries marked resolved" />
+          </dl> : null}
+          {access?.centres.length ? <label className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-slate-500" htmlFor="feedback-centre">Centre<select className="rounded-xl border border-slate-300 bg-white px-3 py-1.5 text-sm font-semibold normal-case tracking-normal text-slate-900 outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-100 disabled:bg-slate-100" disabled={dialogOpen || Boolean(opening)} id="feedback-centre" onChange={(event) => changeCentre(event.target.value)} value={centreId}>{access.centres.map((item) => <option key={item.id} value={item.id}>{item.name} ({item.code})</option>)}</select></label> : null}
+        </section> : null}
         {error ? <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-red-200 bg-red-50 p-4" role="alert"><p className="text-sm text-red-800">{error}</p><button className={feedbackSecondaryButton} disabled={loading || dialogOpen || Boolean(opening)} onClick={() => { setError(""); setAttempt((value) => value + 1); }} type="button">Try again</button></div> : null}
         {notice ? <p className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800" role="status">{notice}</p> : null}
 
-        {access?.centres.length ? <section className="flex flex-wrap items-end justify-between gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        {access?.centres.length && mode !== "admin" ? <section className="flex flex-wrap items-end justify-between gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
           <div><h2 className="text-lg font-bold text-slate-900">{isHousehold ? "Your feedback and enquiries" : "Centre workspace"}</h2><p className="mt-1 max-w-xl text-sm leading-6 text-slate-500">{isHousehold ? "Feedback is shared with linked guardians. A query is private to its submitter and the staff handling it." : "Records and actions reflect your current centre and subject assignments."}</p></div>
           <label className="grid w-full gap-2 text-sm font-bold text-slate-700 sm:w-72" htmlFor="feedback-centre">Centre<select className={feedbackInput} disabled={dialogOpen || Boolean(opening)} id="feedback-centre" onChange={(event) => changeCentre(event.target.value)} value={centreId}>{access.centres.map((item) => <option key={item.id} value={item.id}>{item.name} ({item.code})</option>)}</select></label>
         </section> : null}
@@ -168,11 +177,11 @@ export function FeedbackWorkspace({ audience }: { audience: FeedbackWorkspaceMod
         {!loading && !error && access && !access.centres.length ? <EmptyState title="No feedback centre is available" description={audience === "student" ? "Ask your centre to enable the permission to manage your own bookings. This permission also enables feedback and queries." : "Your account needs an active centre assignment or a linked student to access this area."} /> : null}
 
         {!loading && current ? <>
-          <section className="grid gap-3 sm:grid-cols-3" aria-label="Feedback overview">
+          {mode === "admin" ? null : <section className="grid gap-3 sm:grid-cols-3" aria-label="Feedback overview">
             <Metric label="Published feedback" value={feedback.filter((item) => item.status === "published").length} />
-            <Metric label={mode === "admin" ? "Active centre queries" : "Active queries"} value={queries.filter((item) => item.status !== "resolved").length} />
+            <Metric label="Active queries" value={queries.filter((item) => item.status !== "resolved").length} />
             <Metric label={showWriting ? "Attended bookings awaiting feedback" : "Resolved queries"} value={showWriting ? writableBookings.length : queries.filter((item) => item.status === "resolved").length} />
-          </section>
+          </section>}
 
           <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
             <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 p-4 sm:px-5">
@@ -203,6 +212,10 @@ export function FeedbackWorkspace({ audience }: { audience: FeedbackWorkspaceMod
       {newQuery ? <NewQueryDialog initialFeedback={newQuery.feedback} key={newQuery.feedback?.id ?? "new-query"} onClose={() => setNewQuery(null)} onCreated={(value) => { queryChanged(value); setNewQuery(null); setTab("queries"); setStatus("all"); setNotice("Your query was sent to the centre inbox."); }} open participants={participants} /> : null}
     </main>
   );
+}
+
+function InlineStat({ label, value, helper }: { label: string; value: number; helper: string }) {
+  return <div className="flex items-baseline gap-1.5" title={helper}><dt className="text-xs font-bold uppercase tracking-wide text-slate-500">{label}</dt><dd className="flex h-6 min-w-6 items-center justify-center rounded-full bg-orange-600 px-2 text-xs font-black text-white">{value}</dd></div>;
 }
 
 function Metric({ label, value }: { label: string; value: number }) {
