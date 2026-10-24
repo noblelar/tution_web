@@ -86,6 +86,7 @@ export function SessionManagement() {
   const [assignedTutorIds, setAssignedTutorIds] = useState<string[]>([]);
   const [dialog, setDialog] = useState<"session" | "template" | "generate" | "assign" | null>(null);
   const [expandedSessionIds, setExpandedSessionIds] = useState<string[]>([]);
+  const [expandedTemplateIds, setExpandedTemplateIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [pending, setPending] = useState("");
   const [error, setError] = useState("");
@@ -303,6 +304,10 @@ export function SessionManagement() {
     setExpandedSessionIds((current) => (current.includes(id) ? current.filter((item) => item !== id) : [...current, id]));
   }
 
+  function toggleTemplate(id: string) {
+    setExpandedTemplateIds((current) => (current.includes(id) ? current.filter((item) => item !== id) : [...current, id]));
+  }
+
   function clearFeedback() { setError(""); setNotice(""); }
   function closeDialogs() {
     setDialog(null); setEditingSessionId(""); setEditingTemplateId("");
@@ -387,25 +392,38 @@ export function SessionManagement() {
       ) : null}
 
       {!loading && view === "templates" ? (
-        <section className="grid gap-4 md:grid-cols-2" aria-label="Session templates">
-          {templates.length ? templates.map((item) => (
-            <article className="grid gap-4 rounded-xl border border-slate-200 p-4 sm:p-5" key={item.id}>
-              <div className="flex items-start justify-between gap-3">
-                <div><p className="text-xs font-black uppercase tracking-wide text-orange-600">{weekdays[item.dayOfWeek]} at {item.startTime}</p><h3 className="mt-1 text-lg font-black text-slate-950">{item.name}</h3></div>
-                <span className={`rounded-full px-2.5 py-1 text-xs font-black uppercase ${item.status === "active" ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-600"}`}>{item.status}</span>
-              </div>
-              <SubjectOfferingList offerings={item.offeredSubjects} />
-              <dl className="grid gap-2 text-sm text-slate-600 sm:grid-cols-2">
-                <div><dt className="font-bold text-slate-400">Academic year</dt><dd>{item.academicYearName}</dd></div>
-                <div><dt className="font-bold text-slate-400">Capacity</dt><dd>{item.maximumCapacity ?? "Not limited"}</dd></div>
-              </dl>
-              <div className="flex flex-wrap gap-2 border-t border-slate-100 pt-4">
-                <button className={secondaryButton} disabled={pending !== ""} onClick={() => editTemplate(item)} type="button">Edit</button>
-                <button className={item.status === "active" ? dangerButton : secondaryButton} disabled={pending !== ""} onClick={() => void changeTemplateStatus(item)} type="button">{item.status === "active" ? "Deactivate" : "Reactivate"}</button>
-                <button className={primaryButton} disabled={pending !== "" || item.status !== "active"} onClick={() => openGeneration(item)} type="button">Generate sessions</button>
-              </div>
-            </article>
-          )) : <div className="md:col-span-2"><EmptyState title="No templates yet" description="Create a reusable weekly pattern, then choose each date you want to generate." /></div>}
+        <section className="grid items-start gap-4 md:grid-cols-2 xl:grid-cols-3" aria-label="Session templates">
+          {templates.length ? templates.map((item) => {
+            const expanded = expandedTemplateIds.includes(item.id);
+            const tutorCount = new Set(item.offeredSubjects.flatMap((offering) => offering.tutors.map((tutor) => tutor.profileId))).size;
+            return (
+              <article className="grid gap-3 rounded-xl border border-slate-200 p-4" key={item.id}>
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className={`rounded-full px-2.5 py-1 text-xs font-black uppercase tracking-wide ${item.status === "active" ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-600"}`}>{item.status}</span>
+                  <button aria-expanded={expanded} className={secondaryButton} onClick={() => toggleTemplate(item.id)} type="button">{expanded ? "Hide details" : "Show details"}</button>
+                </div>
+                <div>
+                  <p className="text-xs font-black uppercase tracking-wide text-orange-600">{weekdays[item.dayOfWeek]} at {item.startTime}</p>
+                  <h3 className="mt-1 text-base font-black text-slate-950">{item.name}</h3>
+                </div>
+                <p className="text-xs font-bold text-slate-600">{countLabel(item.offeredSubjects.length, "subject")} · {countLabel(tutorCount, "tutor")}</p>
+                {expanded ? (
+                  <div className="grid gap-4 border-t border-slate-100 pt-4">
+                    <SubjectOfferingList offerings={item.offeredSubjects} />
+                    <dl className="grid gap-2 text-sm text-slate-600 sm:grid-cols-2">
+                      <div><dt className="font-bold text-slate-400">Academic year</dt><dd>{item.academicYearName}</dd></div>
+                      <div><dt className="font-bold text-slate-400">Capacity</dt><dd>{item.maximumCapacity ?? "Not limited"}</dd></div>
+                    </dl>
+                    <div className="flex flex-wrap gap-2">
+                      <button className={secondaryButton} disabled={pending !== ""} onClick={() => editTemplate(item)} type="button">Edit</button>
+                      <button className={item.status === "active" ? dangerButton : secondaryButton} disabled={pending !== ""} onClick={() => void changeTemplateStatus(item)} type="button">{item.status === "active" ? "Deactivate" : "Reactivate"}</button>
+                      <button className={primaryButton} disabled={pending !== "" || item.status !== "active"} onClick={() => openGeneration(item)} type="button">Generate sessions</button>
+                    </div>
+                  </div>
+                ) : null}
+              </article>
+            );
+          }) : <div className="md:col-span-2 xl:col-span-3"><EmptyState title="No templates yet" description="Create a reusable weekly pattern, then choose each date you want to generate." /></div>}
         </section>
       ) : null}
         </div>
