@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { Fragment, FormEvent, useEffect, useMemo, useState } from "react";
 
 import { TutorOnboardingDialog } from "@/components/admin/onboarding-forms";
 import { feedbackButton } from "@/components/feedback/feedback-display";
@@ -28,6 +28,9 @@ export function TutorManagement({ pendingAccountDeleted = false }: { pendingAcco
   const [deletionMessage, setDeletionMessage] = useState(pendingAccountDeleted
     ? "The pending tutor account was permanently deleted. Its audit record is retained."
     : "");
+
+  const [expandedTutorIds, setExpandedTutorIds] = useState<string[]>([]);
+  const [page, setPage] = useState(1);
 
   async function refreshDeletionContext() {
     const [profilesResponse, contextResponse] = await Promise.all([
@@ -112,6 +115,19 @@ export function TutorManagement({ pendingAccountDeleted = false }: { pendingAcco
   ).length;
   const canOnboardTutor = Boolean(management?.canOnboardTutors && management.centres.length > 0);
 
+  const pageSize = 10;
+  const totalPages = Math.max(1, Math.ceil(filteredTutors.length / pageSize));
+  const currentPage = Math.min(page, totalPages);
+  const pageTutors = filteredTutors.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+  const firstShown = filteredTutors.length === 0 ? 0 : (currentPage - 1) * pageSize + 1;
+  const lastShown = Math.min(currentPage * pageSize, filteredTutors.length);
+
+  function toggleTutor(id: string) {
+    setExpandedTutorIds((current) =>
+      current.includes(id) ? current.filter((item) => item !== id) : [...current, id],
+    );
+  }
+
   return (
     <main className="admin-main student-management" aria-labelledby="tutor-management-title">
       <section className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm" aria-labelledby="tutor-management-title">
@@ -144,11 +160,11 @@ export function TutorManagement({ pendingAccountDeleted = false }: { pendingAcco
           <label className="student-search">
             <Icon name="search" size={16} />
             <span className="visually-hidden">Search tutors</span>
-            <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search by name, email, phone, or centre" type="search" />
+            <input value={query} onChange={(event) => { setQuery(event.target.value); setPage(1); }} placeholder="Search by name, email, phone, or centre" type="search" />
           </label>
           <label>
             <span>Account status</span>
-            <select value={status} onChange={(event) => setStatus(event.target.value as TutorStatusFilter)}>
+            <select value={status} onChange={(event) => { setStatus(event.target.value as TutorStatusFilter); setPage(1); }}>
               <option value="all">All statuses</option>
               <option value="active">Active</option>
               <option value="pending_activation">Pending activation</option>
@@ -158,7 +174,7 @@ export function TutorManagement({ pendingAccountDeleted = false }: { pendingAcco
           </label>
           <label>
             <span>Centre</span>
-            <select value={centreId} onChange={(event) => setCentreId(event.target.value)}>
+            <select value={centreId} onChange={(event) => { setCentreId(event.target.value); setPage(1); }}>
               <option value="all">All centres</option>
               {centres.map(([id, name]) => <option key={id} value={id}>{name}</option>)}
             </select>
@@ -177,63 +193,111 @@ export function TutorManagement({ pendingAccountDeleted = false }: { pendingAcco
 
         {filteredTutors.length > 0 ? (
           <>
-            <div className="student-card-grid" aria-label="Tutor profile cards">
-              {filteredTutors.slice(0, 6).map((tutor) => (
-                <TutorProfileCard
-                  key={tutor.id}
-                  tutor={tutor}
-                  onDelete={!loading && management && canDeletePendingTutor(tutor, management)
-                    ? () => { setDeletionMessage(""); setDeletionTarget(tutor); }
-                    : undefined}
-                />
-              ))}
-            </div>
             <div className="student-table-wrap">
               <table className="student-table">
                 <thead>
                   <tr>
                     <th scope="col">Tutor</th>
-                    <th scope="col">Contact</th>
                     <th scope="col">Primary centre</th>
-                    <th scope="col">Account</th>
                     <th scope="col">Profile</th>
                     <th scope="col">Action</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredTutors.map((tutor) => (
-                    <tr key={tutor.id}>
-                      <td>
-                        <strong>{displayName(tutor)}</strong>
-                        <span>{tutor.preferredName ? `Legal name: ${tutor.firstName} ${tutor.lastName}` : "No preferred name"}</span>
-                      </td>
-                      <td>
-                        <strong>{tutor.email}</strong>
-                        <span>
-                          {tutor.emailVerified
-                            ? "Email verified"
-                            : tutor.invitation?.emailDelivery?.status === "failed"
-                              ? "Activation email failed"
-                              : "Verification pending"}
-                        </span>
-                        <span>{tutor.phoneNumber ?? "Phone not recorded"}</span>
-                      </td>
-                      <td><strong>{tutor.primaryCentreName ?? "Not assigned"}</strong></td>
-                      <td><AccountStatus status={tutor.accountStatus} /></td>
-                      <td><StatusBadge status={tutor.profileStatus} /></td>
-                      <td>
-                        <div className="flex flex-wrap items-center gap-2">
-                          <Link className="student-detail-link" href={`/app/admin/tutors?tutor=${tutor.id}`}>Open</Link>
-                          {management && canDeletePendingTutor(tutor, management) ? (
-                            <button className={pendingDeleteButtonClasses} disabled={loading} onClick={() => { setDeletionMessage(""); setDeletionTarget(tutor); }} type="button">Delete pending account</button>
-                          ) : null}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                  {pageTutors.map((tutor) => {
+                    const expanded = expandedTutorIds.includes(tutor.id);
+                    const detailsId = `tutor-details-${tutor.id}`;
+                    return (
+                      <Fragment key={tutor.id}>
+                        <tr>
+                          <td>
+                            <div className="flex flex-wrap items-center gap-2">
+                              <strong>{displayName(tutor)}</strong>
+                              {tutor.invitation?.emailDelivery?.status === "failed" ? (
+                                <span className="rounded-full bg-red-50 px-2 py-0.5 text-xs font-semibold text-red-700">Email failed</span>
+                              ) : !tutor.emailVerified ? (
+                                <span className="rounded-full bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-800">Unverified</span>
+                              ) : null}
+                            </div>
+                          </td>
+                          <td><strong>{tutor.primaryCentreName ?? "Not assigned"}</strong></td>
+                          <td><StatusBadge status={tutor.profileStatus} /></td>
+                          <td>
+                            <div className="flex flex-wrap items-center gap-2">
+                              <button
+                                aria-controls={detailsId}
+                                aria-expanded={expanded}
+                                className={detailToggleClasses}
+                                onClick={() => toggleTutor(tutor.id)}
+                                type="button"
+                              >
+                                {expanded ? "Hide details" : "Details"}
+                              </button>
+                              <Link className="student-detail-link" href={`/app/admin/tutors?tutor=${tutor.id}`}>Open</Link>
+                            </div>
+                          </td>
+                        </tr>
+                        {expanded ? (
+                          <tr id={detailsId}>
+                            <td colSpan={4} className="bg-slate-50">
+                              <dl className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                                <div>
+                                  <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">Email</dt>
+                                  <dd className="text-sm text-slate-900">{tutor.email}</dd>
+                                </div>
+                                <div>
+                                  <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">Verification</dt>
+                                  <dd className="text-sm text-slate-900">
+                                    {tutor.emailVerified
+                                      ? "Email verified"
+                                      : tutor.invitation?.emailDelivery?.status === "failed"
+                                        ? "Activation email failed"
+                                        : "Verification pending"}
+                                  </dd>
+                                </div>
+                                <div>
+                                  <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">Phone</dt>
+                                  <dd className="text-sm text-slate-900">{tutor.phoneNumber ?? "Not recorded"}</dd>
+                                </div>
+                                <div>
+                                  <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">Account</dt>
+                                  <dd><AccountStatus status={tutor.accountStatus} /></dd>
+                                </div>
+                                {tutor.preferredName ? (
+                                  <div>
+                                    <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">Legal name</dt>
+                                    <dd className="text-sm text-slate-900">{tutor.firstName} {tutor.lastName}</dd>
+                                  </div>
+                                ) : null}
+                              </dl>
+                              {management && canDeletePendingTutor(tutor, management) ? (
+                                <button
+                                  className={`${pendingDeleteButtonClasses} mt-4`}
+                                  onClick={() => { setDeletionMessage(""); setDeletionTarget(tutor); }}
+                                  type="button"
+                                >
+                                  Delete pending account
+                                </button>
+                              ) : null}
+                            </td>
+                          </tr>
+                        ) : null}
+                      </Fragment>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
+            <nav className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 text-sm text-slate-600" aria-label="Tutor pagination">
+              <span>Showing {firstShown}–{lastShown} of {filteredTutors.length}</span>
+              {totalPages > 1 ? (
+                <div className="flex items-center gap-2">
+                  <button className={detailToggleClasses} disabled={currentPage === 1} onClick={() => setPage(currentPage - 1)} type="button">Previous</button>
+                  <span>Page {currentPage} of {totalPages}</span>
+                  <button className={detailToggleClasses} disabled={currentPage === totalPages} onClick={() => setPage(currentPage + 1)} type="button">Next</button>
+                </div>
+              ) : null}
+            </nav>
           </>
         ) : null}
       </section>
@@ -265,26 +329,9 @@ export function TutorManagement({ pendingAccountDeleted = false }: { pendingAcco
   );
 }
 
-const pendingDeleteButtonClasses = "rounded-xl border border-red-200 bg-white px-3 py-2 text-xs font-semibold text-red-700 transition hover:border-red-300 hover:bg-red-50 focus:outline-none focus:ring-4 focus:ring-red-100 disabled:cursor-not-allowed disabled:opacity-60";
+const detailToggleClasses = "rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 focus:outline-none focus:ring-4 focus:ring-slate-100 disabled:cursor-not-allowed disabled:opacity-50";
 
-function TutorProfileCard({ tutor, onDelete }: { tutor: TutorProfile; onDelete?: () => void }) {
-  return (
-    <article className="student-profile-card">
-      <header>
-        <span>{initials(tutor)}</span>
-        <div><h2>{displayName(tutor)}</h2><p>{tutor.primaryCentreName ?? "Centre not assigned"}</p></div>
-      </header>
-      <dl>
-        <div><dt>Email</dt><dd>{tutor.email}</dd></div>
-        <div><dt>Verification</dt><dd>{tutor.emailVerified ? "Verified" : "Pending"}</dd></div>
-        <div><dt>Account</dt><dd>{accountStatusLabel(tutor.accountStatus)}</dd></div>
-        <div><dt>Profile</dt><dd>{tutor.profileStatus}</dd></div>
-      </dl>
-      <Link href={`/app/admin/tutors?tutor=${tutor.id}`}>View tutor</Link>
-      {onDelete ? <button className={`${pendingDeleteButtonClasses} mt-3 w-full`} onClick={onDelete} type="button">Delete pending account</button> : null}
-    </article>
-  );
-}
+const pendingDeleteButtonClasses = "rounded-xl border border-red-200 bg-white px-3 py-2 text-xs font-semibold text-red-700 transition hover:border-red-300 hover:bg-red-50 focus:outline-none focus:ring-4 focus:ring-red-100 disabled:cursor-not-allowed disabled:opacity-60";
 
 export function AccountStatus({ status }: { status: string }) {
   return <span className={`student-status-badge is-${status === "active" ? "active" : "inactive"}`}>{accountStatusLabel(status)}</span>;
@@ -292,10 +339,6 @@ export function AccountStatus({ status }: { status: string }) {
 
 export function displayName(tutor: TutorProfile) {
   return tutor.preferredName?.trim() || `${tutor.firstName} ${tutor.lastName}`;
-}
-
-function initials(tutor: TutorProfile) {
-  return `${tutor.firstName.charAt(0)}${tutor.lastName.charAt(0)}`.toUpperCase();
 }
 
 function accountStatusLabel(status: string) {
