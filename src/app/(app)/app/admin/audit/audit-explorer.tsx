@@ -47,12 +47,36 @@ function hasDetails(event: AuditEvent): boolean {
   );
 }
 
+type RangePreset = "24h" | "7d" | "30d" | "all";
+type TimeRange = RangePreset | "custom";
+
+const rangeOptions: { value: RangePreset; label: string }[] = [
+  { value: "24h", label: "Last 24 hours" },
+  { value: "7d", label: "Last 7 days" },
+  { value: "30d", label: "Last 30 days" },
+  { value: "all", label: "All time" },
+];
+
+const rangeHours: Record<Exclude<RangePreset, "all">, number> = {
+  "24h": 24,
+  "7d": 24 * 7,
+  "30d": 24 * 30,
+};
+
+function presetStart(range: Exclude<RangePreset, "all">): string {
+  const start = new Date(Date.now() - rangeHours[range] * 60 * 60 * 1000);
+  const offsetMs = start.getTimezoneOffset() * 60 * 1000;
+  return new Date(start.getTime() - offsetMs).toISOString().slice(0, 16);
+}
+
 export function AuditExplorer() {
   const [context, setContext] = useState<AuditAccessContext | null>(null);
   const [filters, setFilters] = useState<Filters>(emptyFilters);
   const [events, setEvents] = useState<AuditEvent[]>([]);
   const [nextCursor, setNextCursor] = useState<string | undefined>();
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [range, setRange] = useState<TimeRange>("all");
+  const [showMoreFilters, setShowMoreFilters] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -120,12 +144,11 @@ export function AuditExplorer() {
     };
   }, [requestEvents]);
 
-  async function applyFilters(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  async function runQuery(next: Filters) {
     setLoading(true);
     setError("");
     try {
-      await requestEvents(filters);
+      await requestEvents(next);
     } catch (caught) {
       setError(
         caught instanceof Error
@@ -135,6 +158,29 @@ export function AuditExplorer() {
     } finally {
       setLoading(false);
     }
+  }
+
+  async function applyFilters(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setRange(filters.occurredFrom || filters.occurredTo ? "custom" : "all");
+    await runQuery(filters);
+  }
+
+  async function selectRange(next: RangePreset) {
+    const nextFilters = {
+      ...filters,
+      occurredFrom: next === "all" ? "" : presetStart(next),
+      occurredTo: "",
+    };
+    setRange(next);
+    setFilters(nextFilters);
+    await runQuery(nextFilters);
+  }
+
+  async function changeOutcome(outcome: string) {
+    const nextFilters = { ...filters, outcome };
+    setFilters(nextFilters);
+    await runQuery(nextFilters);
   }
 
   async function loadMore() {
@@ -158,20 +204,19 @@ export function AuditExplorer() {
     return <p className="access-state form-error">{error}</p>;
   if (!context) return <p className="loading-state">Loading audit access…</p>;
 
+  const advancedCount =
+    [filters.actionKey, filters.actorUserId].filter((value) => value.trim())
+      .length + (range === "custom" ? 1 : 0);
+
   return (
-    <div className="audit-layout">
-      <aside
-        className="management-panel audit-policy"
-        aria-labelledby="retention-heading"
-      >
-        <p className="eyebrow">Retention control</p>
-        <h2 id="retention-heading">
-          {context.retentionPolicy.securityAdministrationMonths} months
-        </h2>
-        <p>
-          Security and administrative events remain append-only for the approved
-          retention period.
-        </p>
+    <>
+      <section className="audit-retention" aria-label="Retention policy">
+        <div className="audit-retention-summary">
+          <p className="eyebrow">Retention</p>
+          <strong>
+            {context.retentionPolicy.securityAdministrationMonths} months
+          </strong>
+        </div>
         <dl>
           <div>
             <dt>Automatic expiry</dt>
@@ -194,7 +239,7 @@ export function AuditExplorer() {
             </dd>
           </div>
         </dl>
-      </aside>
+      </section>
 
       <section
         className="management-panel audit-results"
@@ -207,7 +252,51 @@ export function AuditExplorer() {
           </div>
           <span className="event-count">{events.length} loaded</span>
         </div>
-        <form className="audit-filters" onSubmit={applyFilters}>
+        <div className="audit-toolbar">
+          <div className="audit-quick">
+            <label>
+              Outcome
+              <select
+                value={filters.outcome}
+                onChange={(event) => changeOutcome(event.target.value)}
+              >
+                <option value="">All outcomes</option>
+                <option value="succeeded">Succeeded</option>
+                <option value="denied">Denied</option>
+                <option value="failed">Failed</option>
+              </select>
+            </label>
+            <div className="audit-range" role="group" aria-label="Time range">
+              {rangeOptions.map((option) => (
+                <button
+                  aria-pressed={range === option.value}
+                  className="audit-range-button"
+                  disabled={loading}
+                  key={option.value}
+                  onClick={() => selectRange(option.value)}
+                  type="button"
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <button
+            aria-controls="audit-more-filters"
+            aria-expanded={showMoreFilters}
+            className="audit-more-toggle"
+            onClick={() => setShowMoreFilters((open) => !open)}
+            type="button"
+          >
+            More filters{advancedCount > 0 ? ` (${advancedCount})` : ""}
+          </button>
+        </div>
+        <form
+          className="audit-filters"
+          hidden={!showMoreFilters}
+          id="audit-more-filters"
+          onSubmit={applyFilters}
+        >
           <label>
             Scope
             <select
@@ -224,20 +313,6 @@ export function AuditExplorer() {
                   {centre.name}
                 </option>
               ))}
-            </select>
-          </label>
-          <label>
-            Outcome
-            <select
-              value={filters.outcome}
-              onChange={(event) =>
-                setFilters({ ...filters, outcome: event.target.value })
-              }
-            >
-              <option value="">All outcomes</option>
-              <option value="succeeded">Succeeded</option>
-              <option value="denied">Denied</option>
-              <option value="failed">Failed</option>
             </select>
           </label>
           <label>
@@ -391,6 +466,6 @@ export function AuditExplorer() {
         )}
         {loading && <p className="loading-state">Loading audit events…</p>}
       </section>
-    </div>
+    </>
   );
 }
