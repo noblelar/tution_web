@@ -85,7 +85,7 @@ export function StageThreeReadinessPanel() {
           {status ? <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold ring-1 ${status.className}`} role="status">{status.label}</span> : null}
         </div>
         <label className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-slate-500 md:justify-self-center">
-          Centre
+          Center
           <select className="rounded-xl border border-slate-300 bg-white px-3 py-1.5 text-sm font-semibold normal-case tracking-normal text-slate-900 outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-100 disabled:bg-slate-100" disabled={loading} onChange={(event) => void changeCentre(event.target.value)} value={centreId}>
             {centres.map((centre) => <option key={centre.id} value={centre.id}>{centre.name} ({centre.code})</option>)}
           </select>

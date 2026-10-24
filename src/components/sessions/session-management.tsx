@@ -2,8 +2,10 @@
 
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 
+import { feedbackButton, feedbackSecondaryButton } from "@/components/feedback/feedback-display";
 import { SessionSubjectEditor } from "@/components/sessions/session-subject-editor";
 import { FormDialog } from "@/components/ui/form-dialog";
+import { SummaryStat } from "@/components/ui/summary-stat";
 import type { AcademicYear, AcademicYearList, Subject, SubjectList } from "@/lib/academic-types";
 import type { CentreList, ManagedCentre } from "@/lib/centre-types";
 import type { TutorProfile, TutorProfileList } from "@/lib/profile-types";
@@ -298,45 +300,52 @@ export function SessionManagement() {
     setGeneratingTemplate(null); setAssigningSubject(null); setAssignedTutorIds([]); setError("");
   }
 
+  const draftCount = sessions.filter((item) => item.status === "draft").length;
+  const publishedCount = sessions.filter((item) => item.status === "published").length;
+  const activeTemplateCount = templates.filter((item) => item.status === "active").length;
+
   return (
-    <div className="grid gap-6">
-      <section className="grid gap-5 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm lg:grid-cols-[1fr_auto] lg:items-end">
-        <div>
-          <p className="mb-2 text-xs font-black uppercase tracking-[0.16em] text-orange-600">Session control</p>
-          <h2 className="text-2xl font-black tracking-tight text-slate-950">Two-hour teaching sessions</h2>
-          <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">Create a single draft or generate selected dates from a reusable template. Each session can offer several simultaneous subjects while sharing one time and capacity.</p>
-        </div>
-        <label className="grid min-w-64 gap-1.5 text-sm font-bold text-slate-700">
-          Management centre
-          <select className={inputClass} disabled={loading || pending !== ""} onChange={(event) => void changeCentre(event.target.value)} value={centreId}>
+    <div className="grid gap-5">
+      <section className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
+        <h2 className="text-lg font-black tracking-tight text-slate-950">Sessions</h2>
+        {!loading && centreId ? <dl className="flex flex-wrap items-center gap-x-5 gap-y-2" aria-label="Session summary">
+          <SummaryStat label="Draft sessions" value={draftCount} tooltip="Sessions not yet published" />
+          <SummaryStat label="Published sessions" value={publishedCount} tooltip="Sessions published to students" />
+          <SummaryStat label="Active templates" value={activeTemplateCount} tooltip="Templates available to generate sessions" />
+        </dl> : null}
+        <label className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-slate-500" htmlFor="sessions-centre">
+          Centre
+          <select className="rounded-xl border border-slate-300 bg-white px-3 py-1.5 text-sm font-semibold normal-case tracking-normal text-slate-900 outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-100 disabled:bg-slate-100" disabled={loading || pending !== ""} id="sessions-centre" onChange={(event) => void changeCentre(event.target.value)} value={centreId}>
             {centres.map((centre) => <option key={centre.id} value={centre.id}>{centre.name} ({centre.code})</option>)}
           </select>
         </label>
       </section>
 
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="inline-flex rounded-xl border border-slate-200 bg-white p-1 shadow-sm" role="tablist" aria-label="Session management views">
-          {(["sessions", "templates"] as const).map((item) => (
-            <button className={`rounded-lg px-4 py-2 text-sm font-bold capitalize transition ${view === item ? "bg-slate-950 text-white" : "text-slate-600 hover:bg-slate-100"}`} key={item} onClick={() => setView(item)} role="tab" type="button">{item}</button>
-          ))}
-        </div>
-        <button className={primaryButton} disabled={loading || !centreId || !activeSubjects.length || !usableYears.length} onClick={view === "sessions" ? openNewSession : openNewTemplate} type="button">
-          {view === "sessions" ? "Create session" : "Create template"}
-        </button>
-      </div>
-
       {error && !dialog ? <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700" role="alert">{error}</p> : null}
       {notice ? <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700" role="status">{notice}</p> : null}
-      {loading ? <p className="rounded-2xl border border-slate-200 bg-white p-6 text-slate-500">Loading sessions…</p> : null}
+
+      <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 p-4 sm:px-5">
+          <div className="flex flex-wrap gap-2" aria-label="Session views">
+            {(["sessions", "templates"] as const).map((item) => (
+              <button aria-pressed={view === item} className={view === item ? feedbackButton : feedbackSecondaryButton} key={item} onClick={() => setView(item)} type="button">{item === "sessions" ? "Sessions" : "Templates"}</button>
+            ))}
+          </div>
+          <button className={feedbackButton} disabled={loading || !centreId || !activeSubjects.length || !usableYears.length} onClick={view === "sessions" ? openNewSession : openNewTemplate} type="button">
+            {view === "sessions" ? "Create session" : "Create template"}
+          </button>
+        </div>
+        <div className="space-y-4 p-4 sm:p-5">
+
+      {loading ? <p className="rounded-xl border border-slate-200 p-6 text-sm text-slate-500" role="status">Loading sessions…</p> : null}
 
       {!loading && view === "sessions" ? (
         <section className="grid gap-4" aria-label="Sessions">
           {sessions.length ? sessions.map((item) => (
-            <article className="grid gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm xl:grid-cols-[1fr_auto] xl:items-center" key={item.id}>
+            <article className="grid gap-4 rounded-xl border border-slate-200 p-4 sm:p-5 xl:grid-cols-[1fr_auto] xl:items-center" key={item.id}>
               <div className="grid gap-3">
                 <div className="flex flex-wrap items-center gap-2">
                   <span className={`rounded-full px-2.5 py-1 text-xs font-black uppercase tracking-wide ${item.status === "published" ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-800"}`}>{item.status}</span>
-                  <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-600">Exactly 2 hours</span>
                   {item.maximumCapacity ? <span className="rounded-full bg-blue-50 px-2.5 py-1 text-xs font-bold text-blue-700">Capacity {item.maximumCapacity}</span> : <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-600">Open capacity</span>}
                 </div>
                 <div>
@@ -361,7 +370,7 @@ export function SessionManagement() {
       {!loading && view === "templates" ? (
         <section className="grid gap-4 md:grid-cols-2" aria-label="Session templates">
           {templates.length ? templates.map((item) => (
-            <article className="grid gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm" key={item.id}>
+            <article className="grid gap-4 rounded-xl border border-slate-200 p-4 sm:p-5" key={item.id}>
               <div className="flex items-start justify-between gap-3">
                 <div><p className="text-xs font-black uppercase tracking-wide text-orange-600">{weekdays[item.dayOfWeek]} at {item.startTime}</p><h3 className="mt-1 text-lg font-black text-slate-950">{item.name}</h3></div>
                 <span className={`rounded-full px-2.5 py-1 text-xs font-black uppercase ${item.status === "active" ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-600"}`}>{item.status}</span>
@@ -380,6 +389,8 @@ export function SessionManagement() {
           )) : <div className="md:col-span-2"><EmptyState title="No templates yet" description="Create a reusable weekly pattern, then choose each date you want to generate." /></div>}
         </section>
       ) : null}
+        </div>
+      </section>
 
       <FormDialog open={dialog === "session"} title={editingSessionId ? "Edit draft session" : "Create a session"} description={`The session is exactly two hours and uses ${selectedCentre?.timeZone ?? "the centre time zone"}.`} onOpenChange={(open) => { if (!open && !pending) closeDialogs(); }}>
         <form className="grid gap-4 p-5" onSubmit={saveSession}>
