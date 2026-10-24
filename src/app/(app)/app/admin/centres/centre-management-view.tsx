@@ -386,7 +386,7 @@ export function CentreManagement() {
         className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm"
         aria-labelledby="centres-page-title"
       >
-        <h1 id="centres-page-title" className="text-lg font-black tracking-tight text-slate-950" title={accessDescription}>Centres</h1>
+        <h1 id="centres-page-title" className="!text-lg font-black tracking-tight text-slate-950" title={accessDescription}>Centres</h1>
         <dl className="flex flex-wrap items-center gap-x-5 gap-y-2" aria-label="Centre status summary">
           <SummaryStat label="Total" value={centres.length} tooltip="All centres in this organization" />
           <SummaryStat label="Active" value={activeCount} tooltip="Centres currently open for operations" />
