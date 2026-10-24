@@ -1,12 +1,19 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 
 import { Icon } from "@/components/dashboard";
 import type { Centre } from "@/lib/account-types";
-import type { StageThreeReadiness } from "@/lib/stage-three-readiness-types";
+import type { StageThreeReadiness, StageThreeReadinessCounts } from "@/lib/stage-three-readiness-types";
 
 type ApiError = { error?: string };
+
+const statusStyles = {
+  ready: { label: "Ready", className: "bg-emerald-50 text-emerald-700 ring-emerald-200" },
+  blocked: { label: "Blocked", className: "bg-red-50 text-red-700 ring-red-200" },
+  attention: { label: "Attention required", className: "bg-amber-50 text-amber-700 ring-amber-200" },
+} as const;
 
 export function StageThreeReadinessPanel() {
   const [centres, setCentres] = useState<Centre[]>([]);
@@ -61,65 +68,114 @@ export function StageThreeReadinessPanel() {
     await load(nextCentreId);
   }
 
+  const status = readiness ? statusStyles[readiness.status] : null;
+  const outstanding = readiness
+    ? [
+        ...readiness.blockers.map((text) => ({ text, blocking: true })),
+        ...readiness.warnings.map((text) => ({ text, blocking: false })),
+      ]
+    : [];
+
   return (
-    <section aria-labelledby="stage-three-readiness-heading" className="student-detail-card is-wide">
-      <div className="student-onboarding-next">
-        <Icon name="book" size={18} />
-        <div>
-          <h2 id="stage-three-readiness-heading">Stage 3 integration readiness</h2>
-          <p>Confirm the academic foundation and assignment coverage before class scheduling depends on this data.</p>
+    <section aria-labelledby="stage-three-readiness-heading" className="grid gap-4">
+      <div className="grid gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm md:grid-cols-[1fr_auto_1fr] md:items-center">
+        <div className="flex flex-wrap items-center gap-3">
+          <Icon name="book" size={18} />
+          <h2 className="text-lg font-black tracking-tight text-slate-950" id="stage-three-readiness-heading">Readiness</h2>
+          {status ? <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold ring-1 ${status.className}`} role="status">{status.label}</span> : null}
         </div>
-        <button className="student-secondary-action" disabled={loading || !centreId} onClick={() => void load()} type="button">
-          {loading ? "Checking…" : "Refresh readiness"}
+        <label className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-slate-500 md:justify-self-center">
+          Centre
+          <select className="rounded-xl border border-slate-300 bg-white px-3 py-1.5 text-sm font-semibold normal-case tracking-normal text-slate-900 outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-100 disabled:bg-slate-100" disabled={loading} onChange={(event) => void changeCentre(event.target.value)} value={centreId}>
+            {centres.map((centre) => <option key={centre.id} value={centre.id}>{centre.name} ({centre.code})</option>)}
+          </select>
+        </label>
+        <button className="rounded-xl border border-slate-300 bg-white px-3 py-1.5 text-sm font-bold text-slate-700 transition-colors hover:bg-slate-50 disabled:opacity-50 md:justify-self-end" disabled={loading || !centreId} onClick={() => void load()} type="button">
+          {loading ? "Checking…" : "Refresh"}
         </button>
       </div>
 
-      <label className="scope-control">
-        Management centre
-        <select disabled={loading} onChange={(event) => void changeCentre(event.target.value)} value={centreId}>
-          {centres.map((centre) => <option key={centre.id} value={centre.id}>{centre.name} ({centre.code})</option>)}
-        </select>
-      </label>
-
       {error ? <p className="form-error" role="alert">{error}</p> : null}
-      {loading && !readiness ? <p className="student-state-message">Checking Stage 3 readiness…</p> : null}
+      {loading && !readiness ? <p className="text-sm text-slate-500">Checking Stage 3 readiness…</p> : null}
 
       {readiness ? (
-        <>
-          <p className="student-state-message" role="status">
-            <strong>{readiness.status === "ready" ? "Ready" : readiness.status === "blocked" ? "Blocked" : "Attention required"}.</strong>{" "}
-            {readiness.ready ? "The centre has complete Stage 3 assignment coverage." : "Review the outstanding items below."}
-          </p>
-
-          <div className="student-table-wrap">
-            <table className="student-table">
-              <thead><tr><th scope="col">Integration area</th><th scope="col">Configured</th><th scope="col">Total active</th></tr></thead>
-              <tbody>
-                <tr><td><strong>Academic years</strong></td><td>{readiness.counts.activeAcademicYears}</td><td>1 required</td></tr>
-                <tr><td><strong>Academic levels</strong></td><td>{readiness.counts.activeAcademicLevels}</td><td>At least 1</td></tr>
-                <tr><td><strong>Subjects</strong></td><td>{readiness.counts.activeSubjects}</td><td>At least 1</td></tr>
-                <tr><td><strong>Tutor capabilities</strong></td><td>{readiness.counts.tutorsWithCapabilities}</td><td>{readiness.counts.activeTutors} tutors</td></tr>
-                <tr><td><strong>Tutor availability</strong></td><td>{readiness.counts.tutorsWithAvailability}</td><td>{readiness.counts.activeTutors} tutors</td></tr>
-                <tr><td><strong>Current student placements</strong></td><td>{readiness.counts.studentsWithCurrentPlacement}</td><td>{readiness.counts.activeStudents} students</td></tr>
+        <div className="grid gap-5 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div className="overflow-x-auto rounded-xl border border-slate-200">
+            <table className="w-full min-w-[32rem] border-collapse text-left text-sm">
+              <thead className="bg-slate-50 text-xs font-bold uppercase tracking-wide text-slate-500">
+                <tr>
+                  <th className="px-4 py-3" scope="col">Integration area</th>
+                  <th className="px-4 py-3" scope="col">Configured</th>
+                  <th className="px-4 py-3" scope="col">Required</th>
+                  <th className="px-4 py-3" scope="col">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {readinessRows(readiness.counts).map((row) => (
+                  <tr key={row.area}>
+                    <td className="px-4 py-3 font-black text-slate-900">{row.area}</td>
+                    <td className="px-4 py-3 text-slate-600">{row.configured}</td>
+                    <td className="px-4 py-3 text-slate-600">{row.required}</td>
+                    <td className="px-4 py-3">
+                      <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold ring-1 ${row.met ? "bg-emerald-50 text-emerald-700 ring-emerald-200" : "bg-red-50 text-red-700 ring-red-200"}`}>
+                        {row.met ? "Met" : "Missing"}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
 
-          {readiness.blockers.length ? <ReadinessItems title="Blocking configuration" items={readiness.blockers} alert /> : null}
-          {readiness.warnings.length ? <ReadinessItems title="Assignment coverage" items={readiness.warnings} /> : null}
-        </>
+          {outstanding.length ? (
+            <div className="grid gap-2">
+              <h3 className="text-sm font-black text-slate-900">Outstanding</h3>
+              <ul className="grid gap-2">
+                {outstanding.map((item) => {
+                  const href = fixHref(item.text);
+                  return (
+                    <li className="flex items-start gap-2 text-sm" key={item.text}>
+                      <span aria-hidden className={`mt-1.5 h-2 w-2 flex-none rounded-full ${item.blocking ? "bg-red-500" : "bg-amber-500"}`} />
+                      {href ? (
+                        <Link className="font-semibold text-slate-800 underline-offset-2 hover:underline" href={href}>{item.text}</Link>
+                      ) : (
+                        <span className="text-slate-800">{item.text}</span>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          ) : null}
+        </div>
       ) : null}
     </section>
   );
 }
 
-function ReadinessItems({ title, items, alert = false }: { title: string; items: string[]; alert?: boolean }) {
-  return (
-    <div className="student-state-message" role={alert ? "alert" : undefined}>
-      <strong>{title}</strong>
-      <ul>{items.map((item) => <li key={item}>{item}</li>)}</ul>
-    </div>
-  );
+function readinessRows(counts: StageThreeReadinessCounts) {
+  const tutors = plural(counts.activeTutors, "tutor");
+  const students = plural(counts.activeStudents, "student");
+  return [
+    { area: "Academic years", configured: counts.activeAcademicYears, required: "1", met: counts.activeAcademicYears >= 1 },
+    { area: "Academic levels", configured: counts.activeAcademicLevels, required: "At least 1", met: counts.activeAcademicLevels >= 1 },
+    { area: "Subjects", configured: counts.activeSubjects, required: "At least 1", met: counts.activeSubjects >= 1 },
+    { area: "Tutor capabilities", configured: counts.tutorsWithCapabilities, required: `All ${tutors}`, met: counts.tutorsWithCapabilities >= counts.activeTutors },
+    { area: "Tutor availability", configured: counts.tutorsWithAvailability, required: `All ${tutors}`, met: counts.tutorsWithAvailability >= counts.activeTutors },
+    { area: "Current student placements", configured: counts.studentsWithCurrentPlacement, required: `All ${students}`, met: counts.studentsWithCurrentPlacement >= counts.activeStudents },
+  ];
+}
+
+function fixHref(item: string) {
+  const text = item.toLowerCase();
+  if (/academic|subject|level/.test(text)) return "/app/admin/classes";
+  if (/tutor/.test(text)) return "/app/admin/tutors";
+  if (/student/.test(text)) return "/app/admin/students";
+  return null;
+}
+
+function plural(count: number, word: string) {
+  return `${count} ${word}${count === 1 ? "" : "s"}`;
 }
 
 async function fetchReadiness(centreId: string) {
