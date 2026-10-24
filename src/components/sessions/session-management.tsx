@@ -61,6 +61,10 @@ const emptyTemplate: TemplateDraft = {
   maximumCapacity: "",
   bookingDeadlineMinutes: "60",
 };
+function countLabel(count: number, word: string) {
+  return `${count} ${word}${count === 1 ? "" : "s"}`;
+}
+
 const weekdays = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
 export function SessionManagement() {
@@ -81,6 +85,7 @@ export function SessionManagement() {
   const [assigningSubject, setAssigningSubject] = useState<{ session: TeachingSession; offering: SessionSubjectOffering } | null>(null);
   const [assignedTutorIds, setAssignedTutorIds] = useState<string[]>([]);
   const [dialog, setDialog] = useState<"session" | "template" | "generate" | "assign" | null>(null);
+  const [expandedSessionIds, setExpandedSessionIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [pending, setPending] = useState("");
   const [error, setError] = useState("");
@@ -294,6 +299,10 @@ export function SessionManagement() {
     finally { setPending(""); }
   }
 
+  function toggleSession(id: string) {
+    setExpandedSessionIds((current) => (current.includes(id) ? current.filter((item) => item !== id) : [...current, id]));
+  }
+
   function clearFeedback() { setError(""); setNotice(""); }
   function closeDialogs() {
     setDialog(null); setEditingSessionId(""); setEditingTemplateId("");
@@ -340,30 +349,40 @@ export function SessionManagement() {
       {loading ? <p className="rounded-xl border border-slate-200 p-6 text-sm text-slate-500" role="status">Loading sessions…</p> : null}
 
       {!loading && view === "sessions" ? (
-        <section className="grid gap-4" aria-label="Sessions">
-          {sessions.length ? sessions.map((item) => (
-            <article className="grid gap-4 rounded-xl border border-slate-200 p-4 sm:p-5 xl:grid-cols-[1fr_auto] xl:items-center" key={item.id}>
-              <div className="grid gap-3">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className={`rounded-full px-2.5 py-1 text-xs font-black uppercase tracking-wide ${item.status === "published" ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-800"}`}>{item.status}</span>
-                  {item.maximumCapacity ? <span className="rounded-full bg-blue-50 px-2.5 py-1 text-xs font-bold text-blue-700">Capacity {item.maximumCapacity}</span> : <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-600">Open capacity</span>}
+        <section className="grid items-start gap-4 md:grid-cols-2 xl:grid-cols-3" aria-label="Sessions">
+          {sessions.length ? sessions.map((item) => {
+            const expanded = expandedSessionIds.includes(item.id);
+            const tutorCount = new Set(item.offeredSubjects.flatMap((offering) => offering.tutors.map((tutor) => tutor.profileId))).size;
+            return (
+              <article className="grid gap-3 rounded-xl border border-slate-200 p-4" key={item.id}>
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className={`rounded-full px-2.5 py-1 text-xs font-black uppercase tracking-wide ${item.status === "published" ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-800"}`}>{item.status}</span>
+                    {item.maximumCapacity ? <span className="rounded-full bg-blue-50 px-2.5 py-1 text-xs font-bold text-blue-700">Capacity {item.maximumCapacity}</span> : <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-600">Open capacity</span>}
+                  </div>
+                  <button aria-expanded={expanded} className={secondaryButton} onClick={() => toggleSession(item.id)} type="button">{expanded ? "Hide details" : "Show details"}</button>
                 </div>
                 <div>
-                  <h3 className="text-lg font-black text-slate-950">{item.offeredSubjects.length} subject{item.offeredSubjects.length === 1 ? "" : "s"} offered</h3>
-                  <p className="mt-1 text-sm font-semibold text-slate-700">{formatSessionDateTime(item.startsAt, item.centreTimeZone)} – {formatSessionTime(item.endsAt, item.centreTimeZone)}</p>
+                  <h3 className="text-base font-black text-slate-950">{formatSessionDateTime(item.startsAt, item.centreTimeZone)} – {formatSessionTime(item.endsAt, item.centreTimeZone)}</h3>
+                  <p className="mt-1 text-xs text-slate-500">Booking deadline {formatSessionDateTime(item.effectiveBookingDeadlineAt, item.centreTimeZone)}</p>
                 </div>
-                <SubjectOfferingList disabled={pending !== "" || item.status === "cancelled" || item.status === "completed"} offerings={item.offeredSubjects} onManage={(offering) => openAssignment(item, offering)} />
-                <dl className="grid gap-2 text-sm text-slate-600 sm:grid-cols-2">
-                  <div><dt className="font-bold text-slate-400">Academic year</dt><dd>{item.academicYearName}</dd></div>
-                  <div><dt className="font-bold text-slate-400">Booking deadline</dt><dd>{formatSessionDateTime(item.effectiveBookingDeadlineAt, item.centreTimeZone)}</dd></div>
-                </dl>
-              </div>
-              <div className="flex flex-wrap gap-2 xl:max-w-80 xl:justify-end">
-                {item.status === "draft" ? <button className={secondaryButton} disabled={pending !== ""} onClick={() => editSession(item)} type="button">Edit</button> : null}
-                {item.status === "draft" ? <button className={primaryButton} disabled={pending !== ""} onClick={() => void publish(item)} type="button">{pending === `publish:${item.id}` ? "Publishing…" : "Publish"}</button> : null}
-              </div>
-            </article>
-          )) : <EmptyState title="No sessions yet" description="Create a single draft or generate sessions from a reusable template." />}
+                <p className="text-xs font-bold text-slate-600">{countLabel(item.offeredSubjects.length, "subject")} · {countLabel(tutorCount, "tutor")}</p>
+                {expanded ? (
+                  <div className="grid gap-4 border-t border-slate-100 pt-4">
+                    <SubjectOfferingList disabled={pending !== "" || item.status === "cancelled" || item.status === "completed"} offerings={item.offeredSubjects} onManage={(offering) => openAssignment(item, offering)} />
+                    <dl className="text-sm text-slate-600">
+                      <dt className="font-bold text-slate-400">Academic year</dt>
+                      <dd>{item.academicYearName}</dd>
+                    </dl>
+                    <div className="flex flex-wrap gap-2">
+                      {item.status === "draft" ? <button className={secondaryButton} disabled={pending !== ""} onClick={() => editSession(item)} type="button">Edit</button> : null}
+                      {item.status === "draft" ? <button className={primaryButton} disabled={pending !== ""} onClick={() => void publish(item)} type="button">{pending === `publish:${item.id}` ? "Publishing…" : "Publish"}</button> : null}
+                    </div>
+                  </div>
+                ) : null}
+              </article>
+            );
+          }) : <div className="md:col-span-2 xl:col-span-3"><EmptyState title="No sessions yet" description="Create a single draft or generate sessions from a reusable template." /></div>}
         </section>
       ) : null}
 
