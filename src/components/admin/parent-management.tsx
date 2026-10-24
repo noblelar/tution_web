@@ -89,9 +89,7 @@ export function ParentManagement() {
     <main className="admin-main parent-management" aria-labelledby="parent-management-title">
       <header className="admin-dashboard-hero">
         <div>
-          <p className="eyebrow">Admin area</p>
           <h1 id="parent-management-title">Parents & guardians</h1>
-          <p>Search, review, and manage parent profiles, linked students, relationship coverage, and permission readiness.</p>
         </div>
         {canOnboardProfiles ? (
           <button className="student-primary-action" onClick={() => setParentDialogOpen(true)} type="button">

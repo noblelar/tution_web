@@ -66,9 +66,7 @@ export function AdminDashboardOverview() {
     <main className="admin-main mx-auto max-w-7xl space-y-7 px-4 py-8 text-slate-900 sm:px-6 lg:px-8" aria-labelledby="admin-dashboard-title">
       <header className="flex flex-wrap items-end justify-between gap-5">
         <div>
-          <p className="text-xs font-bold uppercase tracking-[0.2em] text-orange-600">Tution administration</p>
-          <h1 id="admin-dashboard-title" className="mt-2 text-3xl font-semibold tracking-tight sm:text-4xl">Overview</h1>
-          <p className="mt-2 text-sm text-slate-600">People, teaching, and booking demand from your authorized centres.</p>
+          <h1 id="admin-dashboard-title" className="text-3xl font-semibold tracking-tight sm:text-4xl">Overview</h1>
         </div>
         <button type="button" onClick={() => setRefresh((value) => value + 1)} disabled={loading} className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold hover:border-orange-400 disabled:opacity-50">Refresh data</button>
       </header>

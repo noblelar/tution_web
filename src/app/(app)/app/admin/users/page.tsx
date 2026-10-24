@@ -7,7 +7,6 @@ export default function UsersPage() {
     <main className="management-shell">
       <header className="management-header">
         <div>
-          <p className="eyebrow">Tution administration</p>
           <h1>Accounts and invitations</h1>
         </div>
         <nav className="header-links" aria-label="Administration">

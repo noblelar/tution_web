@@ -155,7 +155,6 @@ export function ParentDetail({ parentProfileId }: { parentProfileId: string }) {
       <header className="student-detail-hero">
         <span>{(parent.preferredName ?? "PG").split(" ").slice(0, 2).map((part) => part.charAt(0)).join("").toUpperCase()}</span>
         <div>
-          <p className="eyebrow">Parent profile</p>
           <h1 id="parent-detail-title">{parent.preferredName ?? "Parent / guardian"}</h1>
           <div className="student-detail-badges">
             <span className={`student-status-badge is-${parent.profileStatus}`}>{parent.profileStatus}</span>

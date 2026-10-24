@@ -7,7 +7,6 @@ export default function AdminClassesPage() {
     <main className="management-shell">
       <header className="management-header">
         <div>
-          <p className="eyebrow">Tution administration</p>
           <h1>Academic setup</h1>
         </div>
         <nav className="header-links" aria-label="Administration">

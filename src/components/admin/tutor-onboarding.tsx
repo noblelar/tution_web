@@ -34,9 +34,7 @@ export function TutorOnboarding() {
     <main className="admin-main" aria-labelledby="tutor-onboarding-title">
       <header className="admin-dashboard-hero">
         <div>
-          <p className="eyebrow">Admin area</p>
           <h1 id="tutor-onboarding-title">Tutors</h1>
-          <p>Start tutor onboarding, centre assignment, profile creation, and invitation delivery from one clean workflow.</p>
         </div>
         <button className="student-primary-action" onClick={() => setDialogOpen(true)} type="button">
           <Icon name="plus" size={16} />

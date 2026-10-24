@@ -114,9 +114,7 @@ export function TutorManagement({ pendingAccountDeleted = false }: { pendingAcco
     <main className="admin-main student-management" aria-labelledby="tutor-management-title">
       <header className="admin-dashboard-hero">
         <div>
-          <p className="eyebrow">Admin area</p>
           <h1 id="tutor-management-title">Tutors</h1>
-          <p>Search and review tutors, account readiness, primary-centre assignment, and profile status from the live database.</p>
         </div>
         {management?.canOnboardTutors ? (
           <button className="student-primary-action disabled:cursor-not-allowed disabled:opacity-50" disabled={!canOnboardTutor} onClick={() => setDialogOpen(true)} type="button">

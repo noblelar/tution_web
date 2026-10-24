@@ -94,9 +94,7 @@ export function StudentManagement() {
     <main className="admin-main student-management" aria-labelledby="student-management-title">
       <header className="admin-dashboard-hero">
         <div>
-          <p className="eyebrow">Admin area</p>
           <h1 id="student-management-title">Students</h1>
-          <p>Search, review, and manage student profiles, people-code visibility, access status, and lifecycle readiness.</p>
         </div>
         {canOnboardProfiles ? (
           <button className="student-primary-action" onClick={() => setStudentDialogOpen(true)} type="button">

@@ -225,7 +225,6 @@ export function TutorDetail({ tutorProfileId }: { tutorProfileId: string }) {
       <header className="student-detail-hero">
         <span>{tutor.firstName.charAt(0)}{tutor.lastName.charAt(0)}</span>
         <div>
-          <p className="eyebrow">Tutor profile</p>
           <h1 id="tutor-detail-title">{displayName(tutor)}</h1>
           <div className="student-detail-badges">
             <StatusBadge status={tutor.profileStatus} />

@@ -7,9 +7,7 @@ type AdminPlaceholderHighlight = {
 };
 
 type AdminPagePlaceholderProps = {
-  eyebrow: string;
   title: string;
-  description: string;
   highlights?: AdminPlaceholderHighlight[];
 };
 
@@ -31,21 +29,14 @@ const defaultHighlights: AdminPlaceholderHighlight[] = [
   },
 ];
 
-export function AdminPagePlaceholder({
-  eyebrow,
-  title,
-  description,
-  highlights,
-}: AdminPagePlaceholderProps) {
+export function AdminPagePlaceholder({ title, highlights }: AdminPagePlaceholderProps) {
   const pageHighlights = highlights ?? defaultHighlights;
 
   return (
     <main className="admin-main" aria-labelledby="admin-page-title">
       <header className="admin-page-heading">
         <div>
-          <p className="eyebrow">{eyebrow}</p>
           <h1 id="admin-page-title">{title}</h1>
-          <p>{description}</p>
         </div>
       </header>
       <section className="admin-placeholder-grid" aria-label={`${title} planning areas`}>

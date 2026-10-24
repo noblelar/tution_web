@@ -394,9 +394,7 @@ export function CentreManagement() {
     <main className="admin-main grid gap-6" aria-labelledby="centres-page-title">
       <header className="admin-dashboard-hero">
         <div>
-          <p className="eyebrow">Admin area</p>
           <h1 id="centres-page-title">Centres</h1>
-          <p>Manage tuition centre identity, address details, and operational status.</p>
         </div>
       </header>
 

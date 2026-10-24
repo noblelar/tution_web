@@ -178,7 +178,6 @@ export function StudentDetail({ studentProfileId }: { studentProfileId: string }
       <header className="student-detail-hero">
         <span>{student.firstName.charAt(0)}{student.lastName.charAt(0)}</span>
         <div>
-          <p className="eyebrow">Student profile</p>
           <h1 id="student-detail-title">{student.firstName} {student.lastName}</h1>
           <div className="student-detail-badges">
             <StatusBadge status={student.profileStatus} />

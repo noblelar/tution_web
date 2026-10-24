@@ -54,9 +54,7 @@ export function AccountSettings() {
     <main className="admin-main account-settings" aria-labelledby="account-settings-title">
       <header className="admin-dashboard-hero">
         <div>
-          <p className="eyebrow">Admin area</p>
           <h1 id="account-settings-title">Settings</h1>
-          <p>Review your signed-in manager or owner account, session controls, and profile-editing readiness.</p>
         </div>
       </header>
 
