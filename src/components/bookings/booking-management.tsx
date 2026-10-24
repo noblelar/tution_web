@@ -193,24 +193,22 @@ export function BookingManagement() {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 className="text-xl font-black text-slate-950">Published sessions</h2>
-            <p className="mt-1 text-sm text-slate-500">Bookings are first-come, first-served against the shared session capacity.</p>
           </div>
           <button className={primaryButton} disabled={!published.length || !context.participants.length} onClick={() => openCreate()} type="button">Add student booking</button>
         </div>
-        <div className="grid gap-3 md:grid-cols-2">
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {published.length ? published.map((item) => (
             <article className="grid gap-3 rounded-xl border border-slate-200 p-4" key={item.id}>
               <div>
-                <p className="text-xs font-black uppercase tracking-wide text-orange-600">{item.offeredSubjects.length} offered {item.offeredSubjects.length === 1 ? "subject" : "subjects"}</p>
                 <h3 className="font-black text-slate-950">{formatDate(item.startsAt, item.centreTimeZone)}</h3>
-                <p className="mt-1 text-sm text-slate-500">{item.maximumCapacity ? `Shared capacity ${item.maximumCapacity}` : "No capacity limit"}</p>
+                {item.maximumCapacity ? <p className="mt-1 text-sm text-slate-500">Shared capacity {item.maximumCapacity}</p> : null}
               </div>
               <div className="flex flex-wrap gap-2">
                 {item.offeredSubjects.map((subject) => <span className="rounded-full bg-orange-50 px-2.5 py-1 text-xs font-black text-orange-700" key={subject.id}>{subject.subjectCode} · {subject.subjectName}</span>)}
               </div>
               <div className="flex flex-wrap gap-2">
                 <button className={secondaryButton} onClick={() => openCreate(item)} type="button">Book student</button>
-                {canCancelSession(context.bookings, item.id) ? <button className={dangerButton} onClick={() => { setTargetSession(item); setReason(""); setDialog("cancel-session"); setError(""); }} type="button">Cancel session</button> : <span className="self-center text-xs font-semibold text-slate-600">Cannot cancel: attendance recorded</span>}
+                <span className="inline-flex" title={canCancelSession(context.bookings, item.id) ? undefined : "Cannot cancel: attendance recorded"}><button className={dangerButton} disabled={!canCancelSession(context.bookings, item.id)} onClick={() => { setTargetSession(item); setReason(""); setDialog("cancel-session"); setError(""); }} type="button">Cancel session</button></span>
               </div>
             </article>
           )) : <Empty text="No published future sessions with offered subjects are available in this centre." />}
