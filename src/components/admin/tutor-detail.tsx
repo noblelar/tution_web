@@ -7,7 +7,6 @@ import { useEffect, useState } from "react";
 import { PendingStaffDeleteDialog } from "@/components/admin/pending-staff-delete-dialog";
 import { canDeletePendingTutor, pendingTutorDeletionEndpoint } from "@/lib/pending-staff-deletion";
 import type { TutorInvitation, TutorManagementContext, TutorProfile } from "@/lib/profile-types";
-import { StatusBadge } from "./student-management";
 import { TutorCapabilities } from "./tutor-capabilities";
 import { TutorAvailabilityManagement } from "./tutor-availability";
 import { AccountStatus, displayName } from "./tutor-management";
@@ -222,16 +221,11 @@ export function TutorDetail({ tutorProfileId }: { tutorProfileId: string }) {
   return (
     <main className="admin-main student-detail" aria-labelledby="tutor-detail-title">
       <Link className="student-back-link" href="/app/admin/tutors">← Back to tutors</Link>
-      <header className="student-detail-hero">
-        <span>{tutor.firstName.charAt(0)}{tutor.lastName.charAt(0)}</span>
-        <div>
-          <h1 id="tutor-detail-title">{displayName(tutor)}</h1>
-          <div className="student-detail-badges">
-            <StatusBadge status={tutor.profileStatus} />
-            <AccountStatus status={tutor.accountStatus} />
-          </div>
-        </div>
-      </header>
+      <section className="flex flex-wrap items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm" aria-labelledby="tutor-detail-title">
+        <span className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-xs font-bold text-slate-700">{tutor.firstName.charAt(0)}{tutor.lastName.charAt(0)}</span>
+        <h1 id="tutor-detail-title" className="!text-lg font-black tracking-tight text-slate-950">{displayName(tutor)}</h1>
+        <AccountStatus status={tutor.accountStatus} />
+      </section>
 
       {tutor.accountStatus === "pending_activation" ? (
         <div className="rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 text-sm leading-6 text-amber-950">
@@ -241,23 +235,16 @@ export function TutorDetail({ tutorProfileId }: { tutorProfileId: string }) {
       ) : null}
 
       <section className="student-detail-grid">
-        <article className="student-detail-card">
-          <h2>Profile summary</h2>
+        <article className="student-detail-card lg:col-span-2">
+          <h2>Profile</h2>
           <dl>
             <Detail label="Legal name" value={`${tutor.firstName} ${tutor.lastName}`} />
             <Detail label="Preferred name" value={tutor.preferredName ?? "Not recorded"} />
             <Detail label="Email" value={tutor.email} />
             <Detail label="Email verification" value={tutor.emailVerified ? "Verified" : "Awaiting verification"} />
             <Detail label="Phone" value={tutor.phoneNumber ?? "Not recorded"} />
-          </dl>
-        </article>
-
-        <article className="student-detail-card">
-          <h2>Organization placement</h2>
-          <dl>
             <Detail label="Primary centre" value={tutor.primaryCentreName ?? "Not assigned"} />
-            <Detail label="Profile status" value={tutor.profileStatus} />
-            <Detail label="Account status" value={formatStatus(tutor.accountStatus)} />
+            <Detail label="Profile status" value={formatStatus(tutor.profileStatus)} />
           </dl>
         </article>
 
