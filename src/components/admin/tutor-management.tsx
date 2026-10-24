@@ -4,8 +4,10 @@ import Link from "next/link";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 
 import { TutorOnboardingDialog } from "@/components/admin/onboarding-forms";
+import { feedbackButton } from "@/components/feedback/feedback-display";
 import { PendingStaffDeleteDialog } from "@/components/admin/pending-staff-delete-dialog";
 import { Icon } from "@/components/dashboard";
+import { SummaryStat } from "@/components/ui/summary-stat";
 import { canDeletePendingTutor, pendingTutorDeletionEndpoint } from "@/lib/pending-staff-deletion";
 import type { TutorManagementContext, TutorProfile, TutorProfileList } from "@/lib/profile-types";
 import { StatusBadge } from "./student-management";
@@ -112,17 +114,22 @@ export function TutorManagement({ pendingAccountDeleted = false }: { pendingAcco
 
   return (
     <main className="admin-main student-management" aria-labelledby="tutor-management-title">
-      <header className="admin-dashboard-hero">
-        <div>
-          <h1 id="tutor-management-title">Tutors</h1>
-        </div>
+      <section className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm" aria-labelledby="tutor-management-title">
+        <h1 id="tutor-management-title" className="!text-lg font-black tracking-tight text-slate-950">Tutors</h1>
+        <dl className="flex flex-wrap items-center gap-x-5 gap-y-2" aria-label="Tutor profile summary">
+          <SummaryStat label="Total" value={tutors.length} tooltip="Tutor profiles available to the organization" />
+          <SummaryStat label="Active" value={activeCount} tooltip="Tutors available for academic capability setup" />
+          <SummaryStat label="Pending" value={pendingCount} tooltip="Tutor accounts awaiting invitation activation" />
+          <SummaryStat label="Restricted" value={restrictedCount} tooltip="Tutor accounts currently suspended or disabled" />
+          <SummaryStat label="Delivery issues" value={deliveryIssueCount} tooltip="Pending invitations whose latest email attempt failed" />
+        </dl>
         {management?.canOnboardTutors ? (
-          <button className="student-primary-action disabled:cursor-not-allowed disabled:opacity-50" disabled={!canOnboardTutor} onClick={() => setDialogOpen(true)} type="button">
+          <button className={`${feedbackButton} inline-flex items-center gap-2 disabled:cursor-not-allowed disabled:opacity-50`} disabled={!canOnboardTutor} onClick={() => setDialogOpen(true)} type="button">
             <Icon name="plus" size={16} />
             Onboard tutor
           </button>
         ) : null}
-      </header>
+      </section>
 
       {deletionMessage ? <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900" role="status">{deletionMessage}</p> : null}
 
@@ -131,14 +138,6 @@ export function TutorManagement({ pendingAccountDeleted = false }: { pendingAcco
           Tutor onboarding is unavailable until an active centre has been created.
         </p>
       ) : null}
-
-      <section className="student-summary-grid" aria-label="Tutor profile summary">
-        <SummaryCard label="Total tutors" value={String(tutors.length)} helper="Tutor profiles currently available to the organization." icon="users" />
-        <SummaryCard label="Active profiles" value={String(activeCount)} helper="Tutors available for academic capability setup." icon="check" />
-        <SummaryCard label="Pending activation" value={String(pendingCount)} helper="Tutor accounts awaiting invitation activation." icon="activity" />
-        <SummaryCard label="Restricted access" value={String(restrictedCount)} helper="Tutor accounts currently suspended or disabled." icon="activity" />
-        <SummaryCard label="Delivery issues" value={String(deliveryIssueCount)} helper="Pending tutor invitations whose latest email attempt failed." icon="activity" />
-      </section>
 
       <section className="student-directory-panel" aria-label="Tutor directory">
         <form className="student-toolbar" onSubmit={(event: FormEvent) => event.preventDefault()}>
@@ -263,17 +262,6 @@ export function TutorManagement({ pendingAccountDeleted = false }: { pendingAcco
         />
       ) : null}
     </main>
-  );
-}
-
-function SummaryCard({ label, value, helper, icon }: { label: string; value: string; helper: string; icon: "activity" | "check" | "grid" | "users" }) {
-  return (
-    <article className="student-summary-card">
-      <span><Icon name={icon} size={18} /></span>
-      <p>{label}</p>
-      <strong>{value}</strong>
-      <small>{helper}</small>
-    </article>
   );
 }
 
