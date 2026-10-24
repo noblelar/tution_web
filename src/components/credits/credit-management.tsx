@@ -69,6 +69,8 @@ export function CreditManagement() {
   }, [context, search]);
   const totalBalance = useMemo(() => (context?.wallets ?? []).reduce((total, wallet) => total + wallet.balanceCredits, 0), [context]);
   const fundedHouseholds = useMemo(() => (context?.wallets ?? []).filter((wallet) => wallet.balanceCredits > 0).length, [context]);
+  const awardCredits = Number(awardDraft.credits);
+  const isValidAward = Number.isInteger(awardCredits) && awardCredits >= 1;
 
   async function changeCentre(nextCentreId: string) {
     setCentreId(nextCentreId); setLoading(true); clearFeedback(); closeDialog();
@@ -142,14 +144,33 @@ export function CreditManagement() {
 
           <section className="grid gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
             <div className="flex flex-wrap items-end justify-between gap-3"><div><h2 className="text-xl font-black text-slate-950">Households</h2><p className="mt-1 text-sm text-slate-500">Choose a household to record paid credit.</p></div><label className="grid min-w-64 gap-1 text-xs font-bold uppercase tracking-wide text-slate-500">Search<input className={inputClass} onChange={(event) => setSearch(event.target.value)} placeholder="Parent, child, email or code" type="search" value={search} /></label></div>
-            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-              {filteredWallets.length ? filteredWallets.map((wallet) => (
-                <article className="grid gap-4 rounded-2xl border border-slate-200 bg-slate-50 p-4" key={wallet.parentProfileId}>
-                  <div className="flex items-start justify-between gap-3"><div><h3 className="font-black text-slate-950">{wallet.parentFirstName} {wallet.parentLastName}</h3><p className="text-sm text-slate-500">{wallet.parentEmail}</p><p className="mt-1 text-xs font-bold uppercase tracking-wide text-slate-400">{wallet.parentPeopleCode}</p></div><Balance value={wallet.balanceCredits} /></div>
-                  <div className="flex flex-wrap gap-1.5">{wallet.children.length ? wallet.children.map((child) => <span className="rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-slate-600" key={child.id}>{child.firstName} {child.lastName}</span>) : <span className="text-xs text-slate-400">No active child at this centre</span>}</div>
-                  <button className={primaryButton} disabled={pending} onClick={() => openAward(wallet)} type="button">Award credits</button>
-                </article>
-              )) : <p className="rounded-xl border border-dashed border-slate-300 p-8 text-center text-slate-500 md:col-span-2 xl:col-span-3">No matching households were found.</p>}
+            <div className="overflow-x-auto rounded-xl border border-slate-200">
+              <table className="w-full min-w-[46rem] border-collapse text-left text-sm">
+                <thead className="bg-slate-50 text-xs font-bold uppercase tracking-wide text-slate-500">
+                  <tr>
+                    <th className="px-4 py-3" scope="col">Household</th>
+                    <th className="px-4 py-3" scope="col">Children</th>
+                    <th className="px-4 py-3 text-right" scope="col">Balance</th>
+                    <th className="px-4 py-3" scope="col"><span className="sr-only">Actions</span></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredWallets.length ? filteredWallets.map((wallet) => (
+                    <tr className="border-t border-slate-100 align-middle" key={wallet.parentProfileId}>
+                      <td className="px-4 py-3">
+                        <strong className="block text-slate-950">{wallet.parentFirstName} {wallet.parentLastName}</strong>
+                        <span className="block text-slate-500">{wallet.parentEmail}</span>
+                        <span className="block text-xs font-bold uppercase tracking-wide text-slate-400">{wallet.parentPeopleCode}</span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex flex-wrap gap-1.5">{wallet.children.length ? wallet.children.map((child) => <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600" key={child.id}>{child.firstName} {child.lastName}</span>) : <span className="text-xs text-slate-400">No active child at this centre</span>}</div>
+                      </td>
+                      <td className="px-4 py-3 text-right"><Balance value={wallet.balanceCredits} /></td>
+                      <td className="px-4 py-3 text-right"><button className={`${secondaryButton} whitespace-nowrap`} disabled={pending} onClick={() => openAward(wallet)} type="button">Award credits</button></td>
+                    </tr>
+                  )) : <tr><td className="px-4 py-8 text-center text-slate-500" colSpan={4}>No matching households were found.</td></tr>}
+                </tbody>
+              </table>
             </div>
           </section>
 
@@ -168,6 +189,10 @@ export function CreditManagement() {
       <FormDialog open={dialog === "award"} title="Award household credits" description={`${selectedWallet?.parentFirstName ?? "Household"} ${selectedWallet?.parentLastName ?? ""} will share these credits with all actively linked children.`} onOpenChange={(open) => { if (!open) closeDialog(); }}>
         <form className="grid gap-4 p-5" onSubmit={award}>
           <div className="rounded-xl bg-orange-50 p-4 text-sm text-orange-900"><strong>One credit equals one hour.</strong> A standard Tution session will use two credits during the booking phase.</div>
+          <div className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm">
+            <span className="font-semibold text-slate-700">Balance after award</span>
+            <span className="font-black text-slate-950">{selectedWallet && isValidAward ? `${selectedWallet.balanceCredits + awardCredits} credits` : "Enter whole credits"}</span>
+          </div>
           <div className="grid gap-4 sm:grid-cols-2"><label className={labelClass}>Credits<input className={inputClass} min={1} onChange={(event) => setAwardDraft({ ...awardDraft, credits: event.target.value })} required type="number" value={awardDraft.credits} /></label><label className={labelClass}>Payment method<select className={inputClass} onChange={(event) => setAwardDraft({ ...awardDraft, paymentMethod: event.target.value as AwardDraft["paymentMethod"] })} value={awardDraft.paymentMethod}><option value="bank_transfer">Bank transfer</option><option value="cash">Cash</option><option value="other">Other</option></select></label></div>
           <label className={labelClass}>Payment reference <span className="font-normal text-slate-400">Optional</span><input className={inputClass} maxLength={160} onChange={(event) => setAwardDraft({ ...awardDraft, paymentReference: event.target.value })} value={awardDraft.paymentReference} /></label>
           <label className={labelClass}>Administrative note <span className="font-normal text-slate-400">Optional; never shown to students</span><textarea className={`${inputClass} min-h-24 resize-y`} maxLength={1000} onChange={(event) => setAwardDraft({ ...awardDraft, note: event.target.value })} value={awardDraft.note} /></label>
@@ -189,7 +214,7 @@ export function CreditManagement() {
 }
 
 function Stat({ label, value, helper }: { label: string; value: number; helper: string }) { return <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><p className="text-xs font-black uppercase tracking-wide text-slate-400">{label}</p><p className="mt-2 text-3xl font-black text-slate-950">{value}</p><p className="mt-1 text-sm text-slate-500">{helper}</p></div>; }
-function Balance({ value }: { value: number }) { return <span className={`rounded-xl px-3 py-2 text-lg font-black ${value > 0 ? "bg-emerald-100 text-emerald-700" : value < 0 ? "bg-red-100 text-red-700" : "bg-slate-200 text-slate-600"}`}>{value}</span>; }
+function Balance({ value }: { value: number }) { return <span className={`whitespace-nowrap rounded-lg px-2.5 py-1 text-sm font-black ${value > 0 ? "bg-emerald-100 text-emerald-700" : value < 0 ? "bg-red-100 text-red-700" : "bg-slate-200 text-slate-600"}`}>{value} credits</span>; }
 
 function LedgerRow({ entry, wallet, pending, onReverse }: { entry: CreditLedgerEntry; wallet?: CreditWallet; pending: boolean; onReverse: (entry: CreditLedgerEntry) => void }) {
   return <tr className="border-b border-slate-100 align-top"><td className="whitespace-nowrap px-3 py-4 text-slate-500">{new Intl.DateTimeFormat("en-GB", { dateStyle: "medium", timeStyle: "short" }).format(new Date(entry.createdAt))}</td><td className="px-3 py-4"><strong className="text-slate-900">{wallet ? `${wallet.parentFirstName} ${wallet.parentLastName}` : "Household"}</strong><span className="block text-xs text-slate-400">{wallet?.parentPeopleCode}</span></td><td className="px-3 py-4"><span className="font-semibold text-slate-700">{entry.kind === "manual_award" ? "Manual award" : entry.kind === "manual_award_reversal" ? "Award reversal" : entry.kind.replaceAll("_", " ")}</span>{entry.note ? <span className="block max-w-xs text-xs text-slate-400">{entry.note}</span> : null}</td><td className="px-3 py-4 text-slate-600">{entry.paymentMethod ? entry.paymentMethod.replaceAll("_", " ") : "—"}{entry.paymentReference ? <span className="block text-xs text-slate-400">{entry.paymentReference}</span> : null}</td><td className={`px-3 py-4 text-right font-black ${entry.deltaCredits > 0 ? "text-emerald-700" : "text-red-700"}`}>{entry.deltaCredits > 0 ? "+" : ""}{entry.deltaCredits}</td><td className="px-3 py-4 text-right font-bold text-slate-700">{entry.balanceAfterCredits}</td><td className="px-3 py-4 text-right">{entry.reversible ? <button className={dangerButton} disabled={pending} onClick={() => onReverse(entry)} type="button">Reverse</button> : null}</td></tr>;
