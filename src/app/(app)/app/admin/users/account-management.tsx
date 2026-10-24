@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { FormEvent, Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { PendingStaffDeleteDialog } from "@/components/admin/pending-staff-delete-dialog";
 import { FormDialog } from "@/components/ui/form-dialog";
@@ -26,6 +26,9 @@ const inputClasses = "w-full rounded-xl border border-slate-300 bg-white px-3.5 
 const primaryButtonClasses = "inline-flex min-h-11 items-center justify-center rounded-xl border border-orange-600 bg-orange-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:border-orange-700 hover:bg-orange-700 focus:outline-none focus:ring-4 focus:ring-orange-100 disabled:cursor-not-allowed disabled:opacity-55";
 const secondaryButtonClasses = "inline-flex min-h-11 items-center justify-center rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 transition hover:border-slate-400 hover:bg-slate-50 focus:outline-none focus:ring-4 focus:ring-slate-100 disabled:cursor-not-allowed disabled:opacity-55";
 const dangerButtonClasses = "inline-flex min-h-10 items-center justify-center rounded-xl border border-red-200 bg-white px-3.5 py-2 text-sm font-bold text-red-700 transition hover:border-red-300 hover:bg-red-50 focus:outline-none focus:ring-4 focus:ring-red-100 disabled:cursor-not-allowed disabled:opacity-55";
+const rowActionClasses = "inline-flex min-h-9 items-center justify-center whitespace-nowrap rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-bold text-slate-700 transition hover:border-slate-400 hover:bg-slate-50 focus:outline-none focus:ring-4 focus:ring-slate-100 disabled:cursor-not-allowed disabled:opacity-55";
+const rowAccentClasses = "inline-flex min-h-9 items-center justify-center whitespace-nowrap rounded-lg border border-orange-200 bg-white px-3 py-1.5 text-xs font-bold text-orange-700 transition hover:border-orange-300 hover:bg-orange-50 focus:outline-none focus:ring-4 focus:ring-orange-100 disabled:cursor-not-allowed disabled:opacity-55";
+const rowDangerClasses = "inline-flex min-h-9 items-center justify-center whitespace-nowrap rounded-lg border border-red-200 bg-white px-3 py-1.5 text-xs font-bold text-red-700 transition hover:border-red-300 hover:bg-red-50 focus:outline-none focus:ring-4 focus:ring-red-100 disabled:cursor-not-allowed disabled:opacity-55";
 
 async function csrfToken(): Promise<string> {
   const response = await fetch("/api/auth/csrf", { cache: "no-store" });
@@ -52,6 +55,7 @@ export function AccountManagement() {
   const [roleCentre, setRoleCentre] = useState("");
   const [deletionTarget, setDeletionTarget] = useState<ManagedAccount | null>(null);
   const [deletionMessage, setDeletionMessage] = useState("");
+  const [expandedAccountId, setExpandedAccountId] = useState("");
   const accountsRequest = useRef(0);
 
   const loadAccounts = useCallback(async (centreId: string) => {
@@ -369,82 +373,136 @@ export function AccountManagement() {
         {deletionMessage ? <p className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900" role="status">{deletionMessage}</p> : null}
         {loading ? <p className="loading-state">Refreshing accounts…</p> : null}
         {!loading && accounts.length === 0 ? <p className="empty-state">No managed accounts are in this scope yet.</p> : null}
-        <div className="account-cards">
-          {accounts.map((account) => (
-            <article className="account-card" key={account.id}>
-              <div className="account-summary">
-                <div>
-                  <h3>{account.firstName} {account.lastName}</h3>
-                  <p>{account.email}</p>
-                </div>
-                <span className={`status-badge status-${account.accountStatus}`}>{account.accountStatus.replaceAll("_", " ")}</span>
-              </div>
-              <div className="mt-3 flex flex-wrap gap-2">
-                {account.roles.map((role) => (
-                  <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-bold capitalize text-slate-700" key={roleKey(role)}>
-                    {role.roleKey}{role.centreId ? ` · ${centreLabel(role.centreId, account, context)}` : ""}
-                  </span>
-                ))}
-              </div>
-              <p className="account-meta mt-3">
-                {account.centres.length > 0 ? account.centres.map((centre) => centre.name).join(", ") : "Organization access"}
-                {account.emailVerified ? " · Email verified" : " · Email not verified"}
-                {account.mfaEnabled ? " · MFA enabled" : ""}
-              </p>
-              {account.accountStatus === "pending_activation" && account.invitation?.emailDelivery ? (
-                <p className="text-sm text-slate-600">
-                  Email: {account.invitation.emailDelivery.status === "smtp_accepted" ? "accepted by mail server" : account.invitation.emailDelivery.status.replaceAll("_", " ")}
-                </p>
-              ) : null}
-              <div className="account-actions">
-                {context.capabilities.canManageRoles && hasAnyStaffRole(account) ? (
-                  <button
-                    className="border-orange-200 text-orange-700 hover:border-orange-300 hover:bg-orange-50"
-                    disabled={pendingAction.startsWith(account.id) || pendingAction.startsWith(`role:${account.id}`)}
-                    onClick={() => openRoleDialog(account)}
-                    type="button"
-                  >
-                    Manage roles
-                  </button>
-                ) : null}
-                {isTutorAccount(account) ? (
-                  <Link href="/app/admin/tutors">Manage in tutor area</Link>
-                ) : context.capabilities.canCreateManagers && account.accountStatus === "pending_activation" && hasRole(account, "manager") ? (
-                  <>
-                    <button disabled={pendingAction.startsWith(account.id)} onClick={() => void mutateAccount(account, "resend")} type="button">New invitation</button>
-                    <button disabled={pendingAction.startsWith(account.id)} onClick={() => void mutateAccount(account, "revoke")} type="button">Revoke invitation</button>
-                  </>
-                ) : null}
-                {canDeletePendingManager(account, context) ? (
-                  <button
-                    className="border-red-200 text-red-700 hover:border-red-300 hover:bg-red-50"
-                    disabled={Boolean(pendingAction) || loading}
-                    onClick={() => { setDeletionMessage(""); setRoleTarget(null); setDeletionTarget(account); }}
-                    type="button"
-                  >
-                    Delete pending account
-                  </button>
-                ) : null}
-                {!isTutorAccount(account) && context.capabilities.canManageRoles && account.accountStatus === "active" ? <button disabled={pendingAction.startsWith(account.id)} onClick={() => void mutateAccount(account, "suspend")} type="button">Suspend</button> : null}
-                {!isTutorAccount(account) && context.capabilities.canManageRoles && (account.accountStatus === "suspended" || account.accountStatus === "disabled") ? <button disabled={pendingAction.startsWith(account.id)} onClick={() => void mutateAccount(account, "restore")} type="button">Restore</button> : null}
-                {!isTutorAccount(account) && context.capabilities.canManageRoles && account.accountStatus !== "disabled" ? <button className="danger-button" disabled={pendingAction.startsWith(account.id)} onClick={() => void mutateAccount(account, "disable")} type="button">Disable</button> : null}
-                {!isTutorAccount(account) && context.canResetMFA && account.mfaEnabled && account.id !== context.actorUserId && account.roles.some((role) => role.roleKey === "owner" || role.roleKey === "manager") ? (
-                  <button
-                    className="danger-button"
-                    disabled={pendingAction.startsWith(account.id)}
-                    onClick={() => {
-                      if (window.confirm(`Reset MFA and revoke every session for ${account.firstName} ${account.lastName}?`)) {
-                        void mutateAccount(account, "mfa-reset");
-                      }
-                    }}
-                    type="button"
-                  >
-                    Reset MFA
-                  </button>
-                ) : null}
-              </div>
-            </article>
-          ))}
+        <div className="mt-5 max-h-[65vh] overflow-auto rounded-xl border border-slate-200">
+          <table className="w-full min-w-[60rem] border-collapse text-sm">
+            <thead className="sticky top-0 z-10 bg-slate-50 text-left text-xs font-bold uppercase tracking-wide text-slate-500">
+              <tr>
+                <th className="sticky left-0 z-20 border-b border-slate-200 bg-slate-50 px-4 py-3" scope="col">Account</th>
+                <th className="border-b border-slate-200 px-4 py-3" scope="col">Status</th>
+                <th className="border-b border-slate-200 px-4 py-3" scope="col">Roles</th>
+                <th className="border-b border-slate-200 px-4 py-3" scope="col">Centre</th>
+                <th className="border-b border-slate-200 px-4 py-3" scope="col">Security</th>
+                <th className="border-b border-slate-200 px-4 py-3" scope="col">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {accounts.map((account) => {
+                const expanded = expandedAccountId === account.id;
+                const detailsId = `account-details-${account.id}`;
+                return (
+                  <Fragment key={account.id}>
+                    <tr className="border-b border-slate-200 align-top">
+                      <th className="sticky left-0 z-[1] bg-white px-4 py-3 text-left font-normal" scope="row">
+                        <p className="m-0 font-bold text-slate-900">{account.firstName} {account.lastName}</p>
+                        <p className="m-0 break-all text-xs text-slate-500">{account.email}</p>
+                      </th>
+                      <td className="px-4 py-3">
+                        <span className={`status-badge status-${account.accountStatus}`}>{account.accountStatus.replaceAll("_", " ")}</span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex flex-wrap gap-1.5">
+                          {account.roles.map((role) => (
+                            <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-bold capitalize text-slate-700" key={roleKey(role)}>
+                              {role.roleKey}
+                            </span>
+                          ))}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-slate-700">
+                        {account.centres.length > 0 ? account.centres.map((centre) => centre.name).join(", ") : "Organization access"}
+                      </td>
+                      <td className="px-4 py-3 text-xs text-slate-600">
+                        <span className="block">{account.emailVerified ? "Email verified" : "Email not verified"}</span>
+                        {account.mfaEnabled ? <span className="block">MFA enabled</span> : null}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex flex-wrap gap-2">
+                          <button aria-controls={detailsId} aria-expanded={expanded} className={rowActionClasses} onClick={() => setExpandedAccountId(expanded ? "" : account.id)} type="button">
+                            {expanded ? "Hide details" : "Details"}
+                          </button>
+                          {context.capabilities.canManageRoles && hasAnyStaffRole(account) ? (
+                            <button
+                              className={rowAccentClasses}
+                              disabled={pendingAction.startsWith(account.id) || pendingAction.startsWith(`role:${account.id}`)}
+                              onClick={() => openRoleDialog(account)}
+                              type="button"
+                            >
+                              Manage roles
+                            </button>
+                          ) : null}
+                          {isTutorAccount(account) ? (
+                            <Link className={rowActionClasses} href="/app/admin/tutors">Manage in tutor area</Link>
+                          ) : context.capabilities.canCreateManagers && account.accountStatus === "pending_activation" && hasRole(account, "manager") ? (
+                            <>
+                              <button className={rowActionClasses} disabled={pendingAction.startsWith(account.id)} onClick={() => void mutateAccount(account, "resend")} type="button">New invitation</button>
+                              <button className={rowActionClasses} disabled={pendingAction.startsWith(account.id)} onClick={() => void mutateAccount(account, "revoke")} type="button">Revoke invitation</button>
+                            </>
+                          ) : null}
+                          {canDeletePendingManager(account, context) ? (
+                            <button
+                              className={rowDangerClasses}
+                              disabled={Boolean(pendingAction) || loading}
+                              onClick={() => { setDeletionMessage(""); setRoleTarget(null); setDeletionTarget(account); }}
+                              type="button"
+                            >
+                              Delete pending account
+                            </button>
+                          ) : null}
+                          {!isTutorAccount(account) && context.capabilities.canManageRoles && account.accountStatus === "active" ? <button className={rowActionClasses} disabled={pendingAction.startsWith(account.id)} onClick={() => void mutateAccount(account, "suspend")} type="button">Suspend</button> : null}
+                          {!isTutorAccount(account) && context.capabilities.canManageRoles && (account.accountStatus === "suspended" || account.accountStatus === "disabled") ? <button className={rowActionClasses} disabled={pendingAction.startsWith(account.id)} onClick={() => void mutateAccount(account, "restore")} type="button">Restore</button> : null}
+                          {!isTutorAccount(account) && context.capabilities.canManageRoles && account.accountStatus !== "disabled" ? <button className={rowDangerClasses} disabled={pendingAction.startsWith(account.id)} onClick={() => void mutateAccount(account, "disable")} type="button">Disable</button> : null}
+                          {!isTutorAccount(account) && context.canResetMFA && account.mfaEnabled && account.id !== context.actorUserId && account.roles.some((role) => role.roleKey === "owner" || role.roleKey === "manager") ? (
+                            <button
+                              className={rowDangerClasses}
+                              disabled={pendingAction.startsWith(account.id)}
+                              onClick={() => {
+                                if (window.confirm(`Reset MFA and revoke every session for ${account.firstName} ${account.lastName}?`)) {
+                                  void mutateAccount(account, "mfa-reset");
+                                }
+                              }}
+                              type="button"
+                            >
+                              Reset MFA
+                            </button>
+                          ) : null}
+                        </div>
+                      </td>
+                    </tr>
+                    {expanded ? (
+                      <tr className="border-b border-slate-200 bg-slate-50" id={detailsId}>
+                        <td className="px-4 py-4" colSpan={6}>
+                          <div className="grid gap-5 md:grid-cols-3">
+                            <div className="grid content-start gap-2">
+                              <h4 className="m-0 text-xs font-bold uppercase tracking-wide text-slate-500">Roles</h4>
+                              {account.roles.map((role) => (
+                                <p className="m-0 text-sm text-slate-800" key={roleKey(role)}>
+                                  <span className="font-bold capitalize">{role.roleKey}</span>
+                                  <span className="text-slate-500"> · {role.centreId ? centreLabel(role.centreId, account, context) : "Organization-wide"}</span>
+                                </p>
+                              ))}
+                            </div>
+                            <div className="grid content-start gap-2">
+                              <h4 className="m-0 text-xs font-bold uppercase tracking-wide text-slate-500">Security</h4>
+                              <p className="m-0 text-sm text-slate-800">{account.emailVerified ? "Email verified" : "Email not verified"}</p>
+                              <p className="m-0 text-sm text-slate-800">{account.mfaEnabled ? "MFA enabled" : "MFA not enabled"}</p>
+                            </div>
+                            {account.accountStatus === "pending_activation" && account.invitation?.emailDelivery ? (
+                              <div className="grid content-start gap-2">
+                                <h4 className="m-0 text-xs font-bold uppercase tracking-wide text-slate-500">Invitation</h4>
+                                <p className="m-0 text-sm text-slate-800">
+                                  Email: {account.invitation.emailDelivery.status === "smtp_accepted" ? "accepted by mail server" : account.invitation.emailDelivery.status.replaceAll("_", " ")}
+                                </p>
+                              </div>
+                            ) : null}
+                          </div>
+                        </td>
+                      </tr>
+                    ) : null}
+                  </Fragment>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
       </section>
 
