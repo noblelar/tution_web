@@ -245,6 +245,30 @@ h1 {
   color: var(--accent);
 }
 
+.auth-recovery-links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  margin-top: -0.15rem;
+  font-size: 0.875rem;
+}
+
+.auth-recovery-links a,
+.login-form .secondary-link,
+.form-error .secondary-link {
+  color: var(--accent);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.auth-recovery-links a:hover,
+.auth-recovery-links a:focus-visible,
+.login-form .secondary-link:hover,
+.login-form .secondary-link:focus-visible {
+  text-decoration: underline;
+}
+
 .visually-hidden {
   position: absolute;
   width: 1px;

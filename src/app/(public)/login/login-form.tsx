@@ -1,7 +1,10 @@
 "use client";
 
+import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+
+import { csrfMutation } from "@/lib/client-auth";
 
 type LoginResult = {
   error?: string;
@@ -156,6 +159,10 @@ export function LoginForm({ oauthError = "", returnTo = "" }: { oauthError?: str
         <input id="email" name="email" type="email" autoComplete="username" required />
         <label htmlFor="password">Password</label>
         <input id="password" name="password" type="password" autoComplete="current-password" required />
+        <div className="auth-recovery-links">
+          <Link href="/forgot-password">Forgot your password?</Link>
+          <Link href="/verify-email">Verify your email</Link>
+        </div>
         <button className="primary-button" disabled={pending} type="submit">
           {pending ? "Signing in…" : "Sign in with password"}
         </button>
@@ -242,17 +249,6 @@ export function LoginForm({ oauthError = "", returnTo = "" }: { oauthError?: str
       {error ? <p className="form-error" role="alert">{error}</p> : null}
     </div>
   );
-}
-
-async function csrfMutation(path: string, body: Record<string, string>): Promise<Response> {
-  const csrfResponse = await fetch("/api/auth/csrf", { cache: "no-store" });
-  if (!csrfResponse.ok) throw new Error("CSRF token unavailable");
-  const { csrfToken } = (await csrfResponse.json()) as { csrfToken: string };
-  return fetch(path, {
-    method: "POST",
-    headers: { "content-type": "application/json", "x-csrf-token": csrfToken },
-    body: JSON.stringify(body),
-  });
 }
 
 function roleHome(user?: LoginResult["user"]): string {
