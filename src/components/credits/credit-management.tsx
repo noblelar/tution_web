@@ -252,7 +252,7 @@ const entryKindLabels: Record<string, string> = {
 
 function entryKindLabel(kind: string) { return entryKindLabels[kind] ?? kind.replaceAll("_", " "); }
 
-function Stat({ label, value, helper }: { label: string; value: number; helper: string }) { return <div className="flex items-baseline gap-1.5" title={helper}><dt className="text-xs font-bold uppercase tracking-wide text-slate-500">{label}</dt><dd className="text-sm font-black text-slate-950">{value}</dd></div>; }
+function Stat({ label, value, helper }: { label: string; value: number; helper: string }) { return <div className="flex items-baseline gap-1.5" title={helper}><dt className="text-xs font-bold uppercase tracking-wide text-slate-500">{label}</dt><dd className="flex h-6 min-w-6 items-center justify-center rounded-full bg-orange-600 px-2 text-xs font-black text-white">{value}</dd></div>; }
 function Balance({ value }: { value: number }) { return <span className={`whitespace-nowrap rounded-lg px-2.5 py-1 text-sm font-black ${value > 0 ? "bg-emerald-100 text-emerald-700" : value < 0 ? "bg-red-100 text-red-700" : "bg-slate-200 text-slate-600"}`}>{value} credits</span>; }
 
 function LedgerRow({ entry, wallet, pending, onReverse }: { entry: CreditLedgerEntry; wallet?: CreditWallet; pending: boolean; onReverse: (entry: CreditLedgerEntry) => void }) {
