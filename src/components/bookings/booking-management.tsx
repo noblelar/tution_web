@@ -230,14 +230,14 @@ export function BookingManagement() {
                     <div className="flex flex-wrap items-center gap-2">
                       <strong className="text-slate-900">{item.subjectCode} · {item.subjectName}</strong>
                       <Status value={item.status} />
-                      {item.lessonFocusLocked ? <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-black uppercase tracking-wide text-slate-600">Attendance recorded</span> : null}
+                      {item.lessonFocusLocked ? <span className="inline-flex h-6 w-6 cursor-default items-center justify-center rounded-full bg-slate-100 text-slate-600" role="img" aria-label="Attendance recorded" title="Attendance recorded"><svg aria-hidden="true" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5" strokeLinecap="round" strokeLinejoin="round" /></svg></span> : null}
                     </div>
                     <p className="mt-1 text-sm text-slate-500">{formatDate(item.startsAt, item.centreTimeZone)} · {item.parentName}{item.queuePosition ? ` · Queue ${item.queuePosition}` : ""}</p>
                     {item.lessonFocus ? <p className="mt-1 text-sm text-slate-600"><span className="font-bold text-slate-500">Lesson focus:</span> {item.lessonFocus}</p> : null}
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {(item.status === "waitlisted" || item.status === "credits_required") && item.queuePosition === 1 ? <button className={primaryButton} disabled={Boolean(pending)} onClick={() => void confirmWaiting(item)} type="button">Confirm place</button> : null}
-                    {canCancelBooking(item.status, item.lessonFocusLocked) ? <button className={dangerButton} disabled={Boolean(pending)} onClick={() => { setTargetBooking(item); setReason(""); setDialog("cancel-booking"); setError(""); }} type="button">Cancel</button> : item.status !== "cancelled" ? <span className="self-center text-xs font-semibold text-slate-600">Cancellation unavailable after attendance</span> : null}
+                    {item.status !== "cancelled" ? <span className="inline-flex" title={canCancelBooking(item.status, item.lessonFocusLocked) ? undefined : "Cancellation unavailable after attendance"}><button className={dangerButton} disabled={Boolean(pending) || !canCancelBooking(item.status, item.lessonFocusLocked)} onClick={() => { setTargetBooking(item); setReason(""); setDialog("cancel-booking"); setError(""); }} type="button">Cancel</button></span> : null}
                   </div>
                 </article>
               ))}
