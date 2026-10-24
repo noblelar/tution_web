@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 
+import { SummaryStat } from "@/components/ui/summary-stat";
 import { getFeedbackContext, getFeedbackQuery, getSessionFeedback, listFeedbackQueries, listSessionFeedback } from "@/lib/feedback-api";
 import type { FeedbackContext, FeedbackEligibleBooking, FeedbackWorkspaceMode } from "@/lib/feedback-context-types";
 import type { FeedbackQuery, SessionFeedback } from "@/lib/feedback-types";
@@ -159,9 +160,9 @@ export function FeedbackWorkspace({ audience }: { audience: FeedbackWorkspaceMod
         {mode === "admin" ? <section className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
           <h2 className="text-lg font-black tracking-tight text-slate-950">Feedback &amp; Queries</h2>
           {!loading && current ? <dl className="flex flex-wrap items-center gap-x-5 gap-y-2" aria-label="Feedback summary">
-            <InlineStat label="Published feedback" value={feedback.filter((item) => item.status === "published").length} helper="Feedback shared with households" />
-            <InlineStat label="Active centre queries" value={queries.filter((item) => item.status !== "resolved").length} helper="Queries not yet resolved" />
-            <InlineStat label="Resolved queries" value={queries.filter((item) => item.status === "resolved").length} helper="Queries marked resolved" />
+            <SummaryStat label="Published feedback" value={feedback.filter((item) => item.status === "published").length} tooltip="Feedback shared with households" />
+            <SummaryStat label="Active centre queries" value={queries.filter((item) => item.status !== "resolved").length} tooltip="Queries not yet resolved" />
+            <SummaryStat label="Resolved queries" value={queries.filter((item) => item.status === "resolved").length} tooltip="Queries marked resolved" />
           </dl> : null}
           {access?.centres.length ? <label className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-slate-500" htmlFor="feedback-centre">Centre<select className="rounded-xl border border-slate-300 bg-white px-3 py-1.5 text-sm font-semibold normal-case tracking-normal text-slate-900 outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-100 disabled:bg-slate-100" disabled={dialogOpen || Boolean(opening)} id="feedback-centre" onChange={(event) => changeCentre(event.target.value)} value={centreId}>{access.centres.map((item) => <option key={item.id} value={item.id}>{item.name} ({item.code})</option>)}</select></label> : null}
         </section> : null}
@@ -212,10 +213,6 @@ export function FeedbackWorkspace({ audience }: { audience: FeedbackWorkspaceMod
       {newQuery ? <NewQueryDialog initialFeedback={newQuery.feedback} key={newQuery.feedback?.id ?? "new-query"} onClose={() => setNewQuery(null)} onCreated={(value) => { queryChanged(value); setNewQuery(null); setTab("queries"); setStatus("all"); setNotice("Your query was sent to the centre inbox."); }} open participants={participants} /> : null}
     </main>
   );
-}
-
-function InlineStat({ label, value, helper }: { label: string; value: number; helper: string }) {
-  return <div className="flex items-baseline gap-1.5" title={helper}><dt className="text-xs font-bold uppercase tracking-wide text-slate-500">{label}</dt><dd className="flex h-6 min-w-6 items-center justify-center rounded-full bg-orange-600 px-2 text-xs font-black text-white">{value}</dd></div>;
 }
 
 function Metric({ label, value }: { label: string; value: number }) {

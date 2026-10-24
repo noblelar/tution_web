@@ -3,6 +3,7 @@
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 
 import { FormDialog } from "@/components/ui/form-dialog";
+import { SummaryStat } from "@/components/ui/summary-stat";
 import type { CentreList, ManagedCentre } from "@/lib/centre-types";
 import type { AdminCreditContext, CreditLedgerEntry, CreditMutationResult, CreditWallet } from "@/lib/credit-types";
 
@@ -146,9 +147,9 @@ export function CreditManagement() {
         <h2 className="text-lg font-black tracking-tight text-slate-950">Credit management</h2>
         {!loading && context ? (
           <dl className="flex flex-wrap items-center gap-x-5 gap-y-2" aria-label="Credit summary">
-            <Stat label="Households" value={context.wallets.length} helper={`Visible through ${context.centreName}`} />
-            <Stat label="Funded households" value={fundedHouseholds} helper="Balances above zero" />
-            <Stat label="Combined balance" value={totalBalance} helper="Credits across visible wallets" />
+            <SummaryStat label="Households" value={context.wallets.length} tooltip={`Visible through ${context.centreName}`} />
+            <SummaryStat label="Funded households" value={fundedHouseholds} tooltip="Balances above zero" />
+            <SummaryStat label="Combined balance" value={totalBalance} tooltip="Credits across visible wallets" />
           </dl>
         ) : null}
         <label className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-slate-500">Centre<select className="rounded-xl border border-slate-300 bg-white px-3 py-1.5 text-sm font-semibold normal-case tracking-normal text-slate-900 outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-100 disabled:bg-slate-100" disabled={loading || pending} onChange={(event) => void changeCentre(event.target.value)} value={centreId}>{centres.map((centre) => <option key={centre.id} value={centre.id}>{centre.name} ({centre.code})</option>)}</select></label>
@@ -252,7 +253,6 @@ const entryKindLabels: Record<string, string> = {
 
 function entryKindLabel(kind: string) { return entryKindLabels[kind] ?? kind.replaceAll("_", " "); }
 
-function Stat({ label, value, helper }: { label: string; value: number; helper: string }) { return <div className="flex items-baseline gap-1.5" title={helper}><dt className="text-xs font-bold uppercase tracking-wide text-slate-500">{label}</dt><dd className="flex h-6 min-w-6 items-center justify-center rounded-full bg-orange-600 px-2 text-xs font-black text-white">{value}</dd></div>; }
 function Balance({ value }: { value: number }) { return <span className={`whitespace-nowrap rounded-lg px-2.5 py-1 text-sm font-black ${value > 0 ? "bg-emerald-100 text-emerald-700" : value < 0 ? "bg-red-100 text-red-700" : "bg-slate-200 text-slate-600"}`}>{value} credits</span>; }
 
 function LedgerRow({ entry, wallet, pending, onReverse }: { entry: CreditLedgerEntry; wallet?: CreditWallet; pending: boolean; onReverse: (entry: CreditLedgerEntry) => void }) {
