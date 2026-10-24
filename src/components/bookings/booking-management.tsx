@@ -4,13 +4,14 @@ import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 
 import { FormDialog } from "@/components/ui/form-dialog";
 import { SummaryStat } from "@/components/ui/summary-stat";
+import { Switch } from "@/components/ui/switch";
 import { canCancelBooking, canCancelSession } from "@/lib/booking-rules";
 import type { BookingContext, BookingParticipant, SessionBooking, SessionCancellationResult } from "@/lib/booking-types";
 import type { CentreList, ManagedCentre } from "@/lib/centre-types";
 import type { SessionList, TeachingSession } from "@/lib/session-types";
 
 type ApiError = { error?: string };
-type Dialog = "create" | "cancel-booking" | "cancel-session" | null;
+type Dialog = "create" | "cancel-booking" | "cancel-session" | "self-booking" | null;
 
 const inputClass = "w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none transition focus:border-orange-500 focus:ring-4 focus:ring-orange-100 disabled:bg-slate-100";
 const primaryButton = "rounded-xl border border-orange-600 bg-orange-600 px-3.5 py-2 text-sm font-black text-white transition hover:bg-orange-700 disabled:cursor-not-allowed disabled:opacity-50";
@@ -30,6 +31,7 @@ export function BookingManagement() {
   const [targetBooking, setTargetBooking] = useState<SessionBooking | null>(null);
   const [targetSession, setTargetSession] = useState<TeachingSession | null>(null);
   const [reason, setReason] = useState("");
+  const [studentSearch, setStudentSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [pending, setPending] = useState("");
   const [error, setError] = useState("");
@@ -77,6 +79,12 @@ export function BookingManagement() {
   const selectedWallet = selectedStudent?.wallets.find((item) => item.parentProfileId === parentId) ?? selectedStudent?.wallets[0];
   const confirmed = (context?.bookings ?? []).filter((item) => item.status === "confirmed").length;
   const waiting = (context?.bookings ?? []).filter((item) => item.status === "waitlisted" || item.status === "credits_required").length;
+  const visibleParticipants = useMemo(() => {
+    const query = studentSearch.trim().toLowerCase();
+    return [...(context?.participants ?? [])]
+      .filter((item) => !query || `${item.firstName} ${item.lastName}`.toLowerCase().includes(query) || item.peopleCode.toLowerCase().includes(query))
+      .sort((a, b) => `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`));
+  }, [context, studentSearch]);
 
   async function changeCentre(next: string) {
     setCentreId(next); setLoading(true); closeDialog(); setError(""); setNotice("");
@@ -172,7 +180,10 @@ export function BookingManagement() {
           <SummaryStat label="Published sessions" value={published.length} tooltip="Open operational sessions" />
         </dl>
       ) : null}
-      <label className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-slate-500">Centre<select className="rounded-xl border border-slate-300 bg-white px-3 py-1.5 text-sm font-semibold normal-case tracking-normal text-slate-900 outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-100 disabled:bg-slate-100" disabled={loading || Boolean(pending)} onChange={(event) => void changeCentre(event.target.value)} value={centreId}>{centres.map((centre) => <option key={centre.id} value={centre.id}>{centre.name} ({centre.code})</option>)}</select></label>
+      <div className="flex flex-wrap items-center gap-3">
+        <button className={secondaryButton} onClick={() => { setStudentSearch(""); setDialog("self-booking"); setError(""); }} type="button">Student self-booking</button>
+        <label className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-slate-500">Centre<select className="rounded-xl border border-slate-300 bg-white px-3 py-1.5 text-sm font-semibold normal-case tracking-normal text-slate-900 outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-100 disabled:bg-slate-100" disabled={loading || Boolean(pending)} onChange={(event) => void changeCentre(event.target.value)} value={centreId}>{centres.map((centre) => <option key={centre.id} value={centre.id}>{centre.name} ({centre.code})</option>)}</select></label>
+      </div>
     </section>
     {error && !dialog ? <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700" role="alert">{error}</p> : null}
     {notice ? <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700" role="status">{notice}</p> : null}
@@ -205,7 +216,6 @@ export function BookingManagement() {
           )) : <Empty text="No published future sessions with offered subjects are available in this centre." />}
         </div>
       </section>
-      <section className="grid gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><div><h2 className="text-xl font-black text-slate-950">Student self-booking</h2><p className="mt-1 text-sm text-slate-500">Students require an activated login plus this explicit permission. Parent booking permissions remain on the household link.</p></div><div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">{context.participants.map((item) => <article className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 p-4" key={item.studentProfileId}><div><strong className="text-slate-900">{item.firstName} {item.lastName}</strong><p className="text-xs font-semibold text-slate-400">{item.peopleCode} · {item.hasLoginAccount ? "Activated login" : "Activation required"}</p></div><button className={item.canManageOwnBookings ? secondaryButton : primaryButton} disabled={Boolean(pending) || (!item.hasLoginAccount && !item.canManageOwnBookings)} onClick={() => void updatePermission(item)} type="button">{item.canManageOwnBookings ? "Disable" : item.hasLoginAccount ? "Enable" : "Unavailable"}</button></article>)}</div></section>
       <section className="grid gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
         <div>
           <h2 className="text-xl font-black text-slate-950">Booking register</h2>
@@ -237,6 +247,20 @@ export function BookingManagement() {
         </div>
       </section>
     </> : null}
+
+    <FormDialog open={dialog === "self-booking"} title="Student self-booking" description="Students need an activated login and this permission to book their own sessions. Parent booking permissions stay on the household link." onOpenChange={(open) => { if (!open) closeDialog(); }}>
+      <div className="grid gap-4 p-5">
+        <label className="grid gap-1.5 text-xs font-bold uppercase tracking-wide text-slate-500">Search by name or student code<input className={inputClass} onChange={(event) => setStudentSearch(event.target.value)} placeholder="Name or student code" type="search" value={studentSearch} /></label>
+        <ul className="grid max-h-[60vh] gap-2 overflow-y-auto">
+          {visibleParticipants.length ? visibleParticipants.map((item) => (
+            <li className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 px-4 py-3" key={item.studentProfileId}>
+              <div className="min-w-0"><p className="truncate font-black text-slate-900">{item.firstName} {item.lastName}</p><p className="text-xs font-semibold text-slate-500">{item.peopleCode} · {item.hasLoginAccount ? "Activated login" : "Activation required"}</p></div>
+              <Switch aria-label={`Self-booking for ${item.firstName} ${item.lastName}`} checked={item.canManageOwnBookings} disabled={Boolean(pending) || (!item.hasLoginAccount && !item.canManageOwnBookings)} onCheckedChange={() => void updatePermission(item)} />
+            </li>
+          )) : <Empty text="No students match this search." />}
+        </ul>
+      </div>
+    </FormDialog>
 
     <FormDialog open={dialog === "create"} title="Add student booking" description="Choose one subject offered in this session. A confirmed booking uses two credits against the shared session capacity." onOpenChange={(open) => { if (!open) closeDialog(); }}>
       <form className="grid gap-4 p-5" onSubmit={createBooking}>
