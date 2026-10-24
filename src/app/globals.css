@@ -520,8 +520,7 @@ h1 {
 }
 
 .primary-button,
-.account-actions button,
-.invitation-alert button {
+.account-actions button {
   padding: 0.7rem 0.9rem;
   border: 1px solid #b7c4d4;
   border-radius: 0.55rem;
@@ -567,25 +566,6 @@ button:disabled {
 .scope-control {
   min-width: 12rem;
   font-size: 0.85rem;
-}
-
-.invitation-alert {
-  display: grid;
-  gap: 0.65rem;
-  margin: 1.25rem 0;
-  padding: 1rem;
-  border: 1px solid #7cb49a;
-  border-radius: 0.75rem;
-  background: #edf9f3;
-}
-
-.invitation-alert code {
-  overflow-wrap: anywhere;
-  font-size: 0.8rem;
-}
-
-.invitation-alert button {
-  justify-self: start;
 }
 
 .account-summary h3 {

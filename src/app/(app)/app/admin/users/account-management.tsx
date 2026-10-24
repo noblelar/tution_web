@@ -22,6 +22,20 @@ type StaffRole = "owner" | "manager" | "tutor";
 type RoleOperation = "assign" | "remove";
 
 const roleLabels: Record<StaffRole, string> = { owner: "Owner", manager: "Manager", tutor: "Tutor" };
+const emailDeliveryLabels: Record<InvitationEmailDelivery["status"], string> = {
+  pending: "Email pending",
+  smtp_accepted: "Email accepted",
+  failed: "Email failed",
+  unavailable: "Email unavailable",
+};
+
+const emailDeliveryClasses: Record<InvitationEmailDelivery["status"], string> = {
+  pending: "border-slate-200 bg-slate-50 text-slate-700",
+  smtp_accepted: "border-emerald-200 bg-emerald-50 text-emerald-800",
+  failed: "border-red-200 bg-red-50 text-red-700",
+  unavailable: "border-amber-200 bg-amber-50 text-amber-800",
+};
+
 const statusFilters = [
   { value: "all", label: "All" },
   { value: "active", label: "Active" },
@@ -372,18 +386,30 @@ export function AccountManagement() {
         ) : null}
 
         {delivery ? (
-          <div className="invitation-alert flex flex-col gap-2" role="status">
-            <strong>
+          <div
+            className={`mt-4 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl border px-4 py-2.5 text-sm ${emailDelivery?.status === "smtp_accepted" ? "border-emerald-200 bg-emerald-50 text-emerald-900" : "border-amber-200 bg-amber-50 text-amber-900"}`}
+            role="status"
+          >
+            <span className="font-bold">
               {emailDelivery?.status === "smtp_accepted"
-                ? "Activation email accepted by the mail server."
-                : "The activation email was not delivered; use the fallback link."}
-            </strong>
-            <code>{delivery.activationUrl}</code>
-            <button type="button" onClick={() => void navigator.clipboard.writeText(delivery.activationUrl)}>Copy link</button>
-            <small>
-              One-time fallback link · expires {new Date(delivery.expiresAt).toLocaleString()}.
-              {emailDelivery?.failureCategory ? ` Delivery status: ${emailDelivery.failureCategory.replaceAll("_", " ")}.` : ""}
-            </small>
+                ? "Activation email accepted."
+                : "Email not delivered. Share the fallback link."}
+            </span>
+            <span className="text-xs text-slate-600">
+              Expires {new Date(delivery.expiresAt).toLocaleString()}
+              {emailDelivery?.failureCategory ? ` · ${emailDelivery.failureCategory.replaceAll("_", " ")}` : ""}
+            </span>
+            <div className="ml-auto flex items-center gap-2">
+              <button className={rowActionClasses} onClick={() => void navigator.clipboard.writeText(delivery.activationUrl)} type="button">Copy fallback link</button>
+              <button
+                aria-label="Dismiss invitation message"
+                className="inline-flex size-9 items-center justify-center rounded-lg text-lg leading-none text-slate-600 transition hover:bg-white/70 focus:outline-none focus:ring-4 focus:ring-slate-100"
+                onClick={() => { setDelivery(null); setEmailDelivery(null); }}
+                type="button"
+              >
+                ×
+              </button>
+            </div>
           </div>
         ) : null}
         {error ? <p className="form-error action-error" role="alert">{error}</p> : null}
@@ -440,6 +466,11 @@ export function AccountManagement() {
                       </th>
                       <td className="px-4 py-3">
                         <span className={`status-badge status-${account.accountStatus}`}>{account.accountStatus.replaceAll("_", " ")}</span>
+                        {account.accountStatus === "pending_activation" && account.invitation?.emailDelivery ? (
+                          <span className={`mt-1.5 inline-flex rounded-full border px-2.5 py-0.5 text-xs font-bold ${emailDeliveryClasses[account.invitation.emailDelivery.status]}`}>
+                            {emailDeliveryLabels[account.invitation.emailDelivery.status]}
+                          </span>
+                        ) : null}
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex flex-wrap gap-1.5">
@@ -513,7 +544,7 @@ export function AccountManagement() {
                     {expanded ? (
                       <tr className="border-b border-slate-200 bg-slate-50" id={detailsId}>
                         <td className="px-4 py-4" colSpan={6}>
-                          <div className="grid gap-5 md:grid-cols-3">
+                          <div className="grid gap-5 md:grid-cols-2">
                             <div className="grid content-start gap-2">
                               <h4 className="m-0 text-xs font-bold uppercase tracking-wide text-slate-500">Roles</h4>
                               {account.roles.map((role) => (
@@ -528,14 +559,6 @@ export function AccountManagement() {
                               <p className="m-0 text-sm text-slate-800">{account.emailVerified ? "Email verified" : "Email not verified"}</p>
                               <p className="m-0 text-sm text-slate-800">{account.mfaEnabled ? "MFA enabled" : "MFA not enabled"}</p>
                             </div>
-                            {account.accountStatus === "pending_activation" && account.invitation?.emailDelivery ? (
-                              <div className="grid content-start gap-2">
-                                <h4 className="m-0 text-xs font-bold uppercase tracking-wide text-slate-500">Invitation</h4>
-                                <p className="m-0 text-sm text-slate-800">
-                                  Email: {account.invitation.emailDelivery.status === "smtp_accepted" ? "accepted by mail server" : account.invitation.emailDelivery.status.replaceAll("_", " ")}
-                                </p>
-                              </div>
-                            ) : null}
                           </div>
                         </td>
                       </tr>
