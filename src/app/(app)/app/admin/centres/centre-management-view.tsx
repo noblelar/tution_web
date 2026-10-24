@@ -395,12 +395,8 @@ export function CentreManagement() {
         {pageCapabilities.canCreate ? <button className={feedbackButton} type="button" onClick={openCreateDialog}>Add centre</button> : null}
       </section>
 
-      <section className="management-panel grid gap-5" aria-labelledby="centres-list-title">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-          <div>
-            <p className="eyebrow">Database-backed locations</p>
-            <h2 id="centres-list-title">Centre directory</h2>
-          </div>
+      <section className="management-panel grid gap-5" aria-label="Centre directory">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-end">
           <div className="grid w-full gap-3 sm:grid-cols-[minmax(13rem,1fr)_minmax(10rem,0.45fr)] lg:max-w-2xl">
             <label className="grid gap-1.5 text-xs font-bold text-slate-600">
               Search
@@ -446,14 +442,9 @@ export function CentreManagement() {
                   <span className={`shrink-0 rounded-full px-3 py-1 text-xs font-bold capitalize ${centre.status === "active" ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-600"}`}>{centre.status}</span>
                 </div>
                 <div className="grid gap-1">
-                  <span className="text-[0.7rem] font-extrabold uppercase tracking-[0.06em] text-slate-500">Address</span>
                   <p className="break-words text-sm leading-6 text-slate-700">{realAddressAvailable ? centre.address : "No operational address provided"}</p>
                   {!realAddressAvailable ? <p className="text-xs font-semibold text-amber-700">A real address is required before this centre can be activated.</p> : null}
                 </div>
-                <dl className="grid gap-3 rounded-xl bg-slate-50 p-4 sm:grid-cols-2">
-                  <div className="grid gap-1"><dt className="text-[0.7rem] font-extrabold uppercase tracking-[0.06em] text-slate-500">Time zone</dt><dd className="m-0 break-words text-sm font-medium text-slate-800">{centre.timeZone}</dd></div>
-                  <div className="grid gap-1"><dt className="text-[0.7rem] font-extrabold uppercase tracking-[0.06em] text-slate-500">Centre ID</dt><dd className="m-0 break-all text-xs font-medium text-slate-600">{centre.id}</dd></div>
-                </dl>
                 {capabilities.canEdit || capabilities.canManageStatus || capabilities.canDelete ? (
                   <div className="mt-auto flex flex-wrap gap-2 border-t border-slate-200 pt-4">
                     {capabilities.canEdit ? <button className={secondaryButtonClasses} disabled={centrePending} type="button" onClick={() => openEditDialog(centre)}>Edit details</button> : null}
