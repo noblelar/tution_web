@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useCallback, useEffect, useState } from "react";
+import { FormEvent, Fragment, useCallback, useEffect, useState } from "react";
 
 import {
   AuditAccessContext,
@@ -52,6 +52,7 @@ export function AuditExplorer() {
   const [filters, setFilters] = useState<Filters>(emptyFilters);
   const [events, setEvents] = useState<AuditEvent[]>([]);
   const [nextCursor, setNextCursor] = useState<string | undefined>();
+  const [expandedId, setExpandedId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -284,62 +285,99 @@ export function AuditExplorer() {
           </button>
         </form>
         {error && <p className="form-error">{error}</p>}
-        <div className="audit-events" aria-live="polite">
+        <div className="audit-table-wrap" aria-live="polite">
           {!loading && events.length === 0 && (
             <p className="empty-state">No audit events match this scope.</p>
           )}
-          {events.map((event) => (
-            <article className="audit-event" key={event.id}>
-              <div className="audit-event-heading">
-                <div>
-                  <h3>{event.actionKey}</h3>
-                  <p>{new Date(event.occurredAt).toLocaleString()}</p>
-                </div>
-                <span className={`status-badge outcome-${event.outcome}`}>
-                  {event.outcome}
-                </span>
-              </div>
-              <dl className="audit-event-meta">
-                <div>
-                  <dt>Actor</dt>
-                  <dd>{actorLabel(event)}</dd>
-                </div>
-                <div>
-                  <dt>Scope</dt>
-                  <dd>{event.centre?.name ?? "Organization"}</dd>
-                </div>
-                <div>
-                  <dt>Target</dt>
-                  <dd>
-                    {event.targetEntityType}
-                    {event.targetEntityId ? ` · ${event.targetEntityId}` : ""}
-                  </dd>
-                </div>
-                {event.requestId && (
-                  <div>
-                    <dt>Request</dt>
-                    <dd>{event.requestId}</dd>
-                  </div>
-                )}
-              </dl>
-              {hasDetails(event) && (
-                <details>
-                  <summary>Safe event details</summary>
-                  <pre>
-                    {JSON.stringify(
-                      {
-                        previousValues: event.previousValues,
-                        newValues: event.newValues,
-                        metadata: event.metadata,
-                      },
-                      null,
-                      2,
-                    )}
-                  </pre>
-                </details>
-              )}
-            </article>
-          ))}
+          {events.length > 0 && (
+            <table className="audit-table">
+              <thead>
+                <tr>
+                  <th scope="col">Time</th>
+                  <th scope="col">Outcome</th>
+                  <th scope="col">Action</th>
+                  <th scope="col">Actor</th>
+                  <th scope="col">Scope</th>
+                  <th scope="col">Target</th>
+                  <th scope="col">
+                    <span className="sr-only">Details</span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {events.map((event) => {
+                  const expanded = expandedId === event.id;
+                  const canExpand = hasDetails(event) || Boolean(event.requestId);
+                  return (
+                    <Fragment key={event.id}>
+                      <tr>
+                        <td className="audit-time">
+                          {new Date(event.occurredAt).toLocaleString()}
+                        </td>
+                        <td>
+                          <span className={`status-badge outcome-${event.outcome}`}>
+                            {event.outcome}
+                          </span>
+                        </td>
+                        <td className="audit-action">{event.actionKey}</td>
+                        <td>{actorLabel(event)}</td>
+                        <td>{event.centre?.name ?? "Organization"}</td>
+                        <td className="audit-target">
+                          {event.targetEntityType}
+                          {event.targetEntityId ? ` · ${event.targetEntityId}` : ""}
+                        </td>
+                        <td>
+                          {canExpand && (
+                            <button
+                              aria-controls={`audit-details-${event.id}`}
+                              aria-expanded={expanded}
+                              className="audit-toggle"
+                              onClick={() =>
+                                setExpandedId(expanded ? null : event.id)
+                              }
+                              type="button"
+                            >
+                              {expanded ? "Hide" : "Details"}
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                      {expanded && (
+                        <tr
+                          className="audit-detail-row"
+                          id={`audit-details-${event.id}`}
+                        >
+                          <td colSpan={7}>
+                            {event.requestId && (
+                              <dl className="audit-event-meta">
+                                <div>
+                                  <dt>Request</dt>
+                                  <dd>{event.requestId}</dd>
+                                </div>
+                              </dl>
+                            )}
+                            {hasDetails(event) && (
+                              <pre>
+                                {JSON.stringify(
+                                  {
+                                    previousValues: event.previousValues,
+                                    newValues: event.newValues,
+                                    metadata: event.metadata,
+                                  },
+                                  null,
+                                  2,
+                                )}
+                              </pre>
+                            )}
+                          </td>
+                        </tr>
+                      )}
+                    </Fragment>
+                  );
+                })}
+              </tbody>
+            </table>
+          )}
         </div>
         {nextCursor && (
           <button
