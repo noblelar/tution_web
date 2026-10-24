@@ -202,40 +202,66 @@ export function AcademicSetup() {
       {!loading && centreId ? (
         <>
           <AcademicYearsPanel centreId={centreId} />
-          <div className={styles.catalogueGrid}>
-          <CataloguePanel
-            title="Academic levels"
-            description="Create the ordered levels used later by students, tutors, lessons, materials, and assignments."
-            count={levels.length}
-            actionLabel="Add level"
-            onAction={openLevelDialog}
-          >
-            <div className={styles.entries}>
-              {levels.length ? levels.map((level) => (
-                <CatalogueEntry key={level.id} name={level.name} description={level.description} order={level.displayOrder} status={level.status}>
-                  <button disabled={pendingAction !== ""} onClick={() => editLevel(level)} type="button">Edit</button>
-                  <button className={level.status === "active" ? styles.dangerButton : styles.restoreButton} disabled={pendingAction !== ""} onClick={() => void changeStatus("levels", level.id, level.status === "active" ? "deactivate" : "reactivate")} type="button">{level.status === "active" ? "Deactivate" : "Reactivate"}</button>
-                </CatalogueEntry>
-              )) : <p className="empty-state">No academic levels have been created yet.</p>}
-            </div>
-          </CataloguePanel>
+          <div className="grid items-start gap-5 lg:grid-cols-2">
+            <CataloguePanel id="academic-levels-title" title="Academic levels" count={levels.length} actionLabel="Add level" onAction={openLevelDialog}>
+              {levels.length ? (
+                <div className="overflow-x-auto rounded-xl border border-slate-200">
+                  <table className="w-full min-w-[26rem] border-collapse text-left text-sm">
+                    <thead className="bg-slate-50 text-xs font-bold uppercase tracking-wide text-slate-500">
+                      <tr>
+                        <th className="px-4 py-3" scope="col">Name</th>
+                        <th className="px-4 py-3" scope="col">Order</th>
+                        <th className="px-4 py-3" scope="col">Status</th>
+                        <th className="px-4 py-3 text-right" scope="col">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {levels.map((level) => (
+                        <tr key={level.id}>
+                          <td className="px-4 py-3"><CatalogueName name={level.name} description={level.description} /></td>
+                          <td className="px-4 py-3 text-slate-600">{level.displayOrder}</td>
+                          <td className="px-4 py-3"><CatalogueStatus status={level.status} /></td>
+                          <td className="px-4 py-3">
+                            <CatalogueActions active={level.status === "active"} disabled={pendingAction !== ""} onEdit={() => editLevel(level)} onToggle={() => void changeStatus("levels", level.id, level.status === "active" ? "deactivate" : "reactivate")} />
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : <p className="empty-state">No academic levels have been created yet.</p>}
+            </CataloguePanel>
 
-          <CataloguePanel
-            title="Subjects"
-            description="Maintain the core subjects offered by the tuition centre, with stable codes for future integrations."
-            count={subjects.length}
-            actionLabel="Add subject"
-            onAction={openSubjectDialog}
-          >
-            <div className={styles.entries}>
-              {subjects.length ? subjects.map((subject) => (
-                <CatalogueEntry key={subject.id} name={subject.name} code={subject.code} description={subject.description} order={subject.displayOrder} status={subject.status}>
-                  <button disabled={pendingAction !== ""} onClick={() => editSubject(subject)} type="button">Edit</button>
-                  <button className={subject.status === "active" ? styles.dangerButton : styles.restoreButton} disabled={pendingAction !== ""} onClick={() => void changeStatus("subjects", subject.id, subject.status === "active" ? "deactivate" : "reactivate")} type="button">{subject.status === "active" ? "Deactivate" : "Reactivate"}</button>
-                </CatalogueEntry>
-              )) : <p className="empty-state">No subjects have been created yet.</p>}
-            </div>
-          </CataloguePanel>
+            <CataloguePanel id="subjects-title" title="Subjects" count={subjects.length} actionLabel="Add subject" onAction={openSubjectDialog}>
+              {subjects.length ? (
+                <div className="overflow-x-auto rounded-xl border border-slate-200">
+                  <table className="w-full min-w-[32rem] border-collapse text-left text-sm">
+                    <thead className="bg-slate-50 text-xs font-bold uppercase tracking-wide text-slate-500">
+                      <tr>
+                        <th className="px-4 py-3" scope="col">Name</th>
+                        <th className="px-4 py-3" scope="col">Code</th>
+                        <th className="px-4 py-3" scope="col">Order</th>
+                        <th className="px-4 py-3" scope="col">Status</th>
+                        <th className="px-4 py-3 text-right" scope="col">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {subjects.map((subject) => (
+                        <tr key={subject.id}>
+                          <td className="px-4 py-3"><CatalogueName name={subject.name} description={subject.description} /></td>
+                          <td className="px-4 py-3"><code className="rounded bg-orange-50 px-1.5 py-0.5 text-xs font-extrabold text-orange-700">{subject.code}</code></td>
+                          <td className="px-4 py-3 text-slate-600">{subject.displayOrder}</td>
+                          <td className="px-4 py-3"><CatalogueStatus status={subject.status} /></td>
+                          <td className="px-4 py-3">
+                            <CatalogueActions active={subject.status === "active"} disabled={pendingAction !== ""} onEdit={() => editSubject(subject)} onToggle={() => void changeStatus("subjects", subject.id, subject.status === "active" ? "deactivate" : "reactivate")} />
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : <p className="empty-state">No subjects have been created yet.</p>}
+            </CataloguePanel>
           </div>
         </>
       ) : null}
@@ -286,12 +312,40 @@ export function AcademicSetup() {
   );
 }
 
-function CataloguePanel({ title, description, count, actionLabel, onAction, children }: { title: string; description: string; count: number; actionLabel: string; onAction: () => void; children: React.ReactNode }) {
-  return <section className={`management-panel ${styles.cataloguePanel}`}><header className={styles.panelHeader}><div><p className="eyebrow">{count} configured</p><h2>{title}</h2><p>{description}</p></div><button className="primary-button" onClick={onAction} type="button">{actionLabel}</button></header>{children}</section>;
+function CataloguePanel({ id, title, count, actionLabel, onAction, children }: { id: string; title: string; count: number; actionLabel: string; onAction: () => void; children: React.ReactNode }) {
+  return (
+    <section className="grid content-start gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm" aria-labelledby={id}>
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <h2 className="text-xl font-black text-slate-950" id={id}>
+          {title} <span className="text-sm font-bold text-slate-500">{count}</span>
+        </h2>
+        <button className="primary-button" onClick={onAction} type="button">{actionLabel}</button>
+      </div>
+      {children}
+    </section>
+  );
 }
 
-function CatalogueEntry({ name, code, description, order, status, children }: { name: string; code?: string; description?: string; order: number; status: "active" | "inactive"; children: React.ReactNode }) {
-  return <article className={styles.entry}><div className={styles.entryHeader}><div><div className={styles.entryTitle}><h3>{name}</h3>{code ? <code>{code}</code> : null}</div><p>{description || "No description provided."}</p></div><span className={`status-badge ${status === "active" ? "status-active" : "status-disabled"}`}>{status}</span></div><div className={styles.entryFooter}><span>Display order {order}</span><div className={styles.entryActions}>{children}</div></div></article>;
+function CatalogueName({ name, description }: { name: string; description?: string | null }) {
+  return (
+    <>
+      <span className="font-black text-slate-900">{name}</span>
+      {description ? <span className="block max-w-xs truncate text-xs text-slate-500" title={description}>{description}</span> : null}
+    </>
+  );
+}
+
+function CatalogueStatus({ status }: { status: "active" | "inactive" }) {
+  return <span className={`status-badge ${status === "active" ? "status-active" : "status-disabled"}`}>{status}</span>;
+}
+
+function CatalogueActions({ active, disabled, onEdit, onToggle }: { active: boolean; disabled: boolean; onEdit: () => void; onToggle: () => void }) {
+  return (
+    <div className="flex flex-wrap justify-end gap-3">
+      <button className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-bold text-slate-700 transition-colors hover:bg-slate-50 disabled:opacity-50" disabled={disabled} onClick={onEdit} type="button">Edit</button>
+      <button className={`text-xs font-bold hover:underline disabled:opacity-50 ${active ? "text-red-700" : "text-emerald-700"}`} disabled={disabled} onClick={onToggle} type="button">{active ? "Deactivate" : "Reactivate"}</button>
+    </div>
+  );
 }
 
 function errorMessage(caught: unknown, fallback: string) { return caught instanceof Error ? caught.message : fallback; }
